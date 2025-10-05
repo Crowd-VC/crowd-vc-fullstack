@@ -1,18 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import type { WalletInfo } from "@/lib/types"
+import { useAccount, useBalance } from "wagmi";
+import { formatEther } from "viem";
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletInfo>({
-    address: "0x742d...8f3a",
-    balance: 125000,
-    connected: true,
-  })
-
+  const { address, isConnected } = useAccount();
+  const { data: balance } = useBalance({
+    address,
+  });
   return {
-    wallet,
-    connect: () => setWallet((prev) => ({ ...prev, connected: true })),
-    disconnect: () => setWallet((prev) => ({ ...prev, connected: false })),
+    wallet: {
+      address,
+      isConnected,
+      balance: balance?.value ? formatEther(balance.value) : 0,
+    }
   }
 }

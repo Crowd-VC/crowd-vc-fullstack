@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Pool } from "@/lib/types";
-import { TransactionStepper } from "./transaction-stepper";
+import { TransactionStepper } from "../../../../components/pools/transaction-stepper";
 
 interface ContributeModalProps {
 	pool: Pool | null;

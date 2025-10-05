@@ -68,7 +68,7 @@ export function SecondaryHeader() {
 									</NavigationMenuLink>
 								</li>
 								{item.subcategories.map((subcategory) => (
-									<>
+									<React.Fragment key={subcategory.category}>
 										<ListItem
 											key={subcategory.category}
 											href="/docs"
@@ -76,7 +76,7 @@ export function SecondaryHeader() {
 										>
 											{subcategory.description}
 										</ListItem>
-									</>
+									</React.Fragment>
 								))}
 							</ul>
 						</NavigationMenuContent>

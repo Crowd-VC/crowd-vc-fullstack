@@ -1,6 +1,6 @@
 "use client"
 
-import { PoolCard } from "./pool-card"
+import { PoolCard } from "../../../../components/pools/pool-card"
 import type { Pool } from "@/lib/types"
 
 interface PoolListProps {
