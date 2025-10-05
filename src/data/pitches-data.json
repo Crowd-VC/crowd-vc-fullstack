@@ -1,0 +1,272 @@
+[
+	{
+		"id": 1,
+		"header": "EcoFlow - Smart Water Management",
+		"type": "CleanTech",
+		"status": "Approved",
+		"funding_goal": "250000",
+		"current_funding": "125000",
+		"reviewer": "Sarah Chen"
+	},
+	{
+		"id": 2,
+		"header": "MediConnect - Telemedicine Platform",
+		"type": "HealthTech",
+		"status": "In Review",
+		"funding_goal": "500000",
+		"current_funding": "0",
+		"reviewer": "Dr. Michael Roberts"
+	},
+	{
+		"id": 3,
+		"header": "CryptoSecure - Blockchain Wallet",
+		"type": "FinTech",
+		"status": "Approved",
+		"funding_goal": "750000",
+		"current_funding": "320000",
+		"reviewer": "Alex Thompson"
+	},
+	{
+		"id": 4,
+		"header": "LearnBot - AI Tutoring Assistant",
+		"type": "EdTech",
+		"status": "Approved",
+		"funding_goal": "300000",
+		"current_funding": "180000",
+		"reviewer": "Emma Davis"
+	},
+	{
+		"id": 5,
+		"header": "FarmSense - IoT Agriculture",
+		"type": "AgriTech",
+		"status": "In Pool",
+		"funding_goal": "400000",
+		"current_funding": "45000",
+		"reviewer": "James Wilson"
+	},
+	{
+		"id": 6,
+		"header": "RetailAI - Smart Inventory System",
+		"type": "Retail Tech",
+		"status": "In Review",
+		"funding_goal": "600000",
+		"current_funding": "0",
+		"reviewer": "Lisa Wong"
+	},
+	{
+		"id": 7,
+		"header": "GreenEnergy - Solar Panel Optimizer",
+		"type": "CleanTech",
+		"status": "Approved",
+		"funding_goal": "850000",
+		"current_funding": "567000",
+		"reviewer": "David Kim"
+	},
+	{
+		"id": 8,
+		"header": "CloudSync - File Management",
+		"type": "SaaS",
+		"status": "Rejected",
+		"funding_goal": "200000",
+		"current_funding": "0",
+		"reviewer": "Nina Patel"
+	},
+	{
+		"id": 9,
+		"header": "FitTrack - Wearable Health Monitor",
+		"type": "HealthTech",
+		"status": "In Pool",
+		"funding_goal": "450000",
+		"current_funding": "78000",
+		"reviewer": "Dr. Michael Roberts"
+	},
+	{
+		"id": 10,
+		"header": "AutoDrive - Autonomous Vehicle Software",
+		"type": "Mobility",
+		"status": "In Review",
+		"funding_goal": "2000000",
+		"current_funding": "0",
+		"reviewer": "Carlos Rodriguez"
+	},
+	{
+		"id": 11,
+		"header": "VoiceChat - Language Learning App",
+		"type": "EdTech",
+		"status": "Approved",
+		"funding_goal": "150000",
+		"current_funding": "95000",
+		"reviewer": "Emma Davis"
+	},
+	{
+		"id": 12,
+		"header": "SpaceLink - Satellite Communication",
+		"type": "SpaceTech",
+		"status": "In Review",
+		"funding_goal": "5000000",
+		"current_funding": "0",
+		"reviewer": "Raj Patel"
+	},
+	{
+		"id": 13,
+		"header": "HomeBot - Smart Home Assistant",
+		"type": "IoT",
+		"status": "In Pool",
+		"funding_goal": "350000",
+		"current_funding": "142000",
+		"reviewer": "Thomas Wilson"
+	},
+	{
+		"id": 14,
+		"header": "FoodTrace - Supply Chain Tracker",
+		"type": "FoodTech",
+		"status": "Approved",
+		"funding_goal": "280000",
+		"current_funding": "210000",
+		"reviewer": "Maria Garcia"
+	},
+	{
+		"id": 15,
+		"header": "CyberShield - Network Security",
+		"type": "CyberSecurity",
+		"status": "In Review",
+		"funding_goal": "800000",
+		"current_funding": "0",
+		"reviewer": "Sarah Johnson"
+	},
+	{
+		"id": 16,
+		"header": "GameForge - Indie Game Platform",
+		"type": "Gaming",
+		"status": "Rejected",
+		"funding_goal": "400000",
+		"current_funding": "0",
+		"reviewer": "Daniel Park"
+	},
+	{
+		"id": 17,
+		"header": "EcoPackage - Biodegradable Packaging",
+		"type": "Sustainability",
+		"status": "Approved",
+		"funding_goal": "320000",
+		"current_funding": "156000",
+		"reviewer": "Sophia Martinez"
+	},
+	{
+		"id": 18,
+		"header": "DeliveryDrone - Last Mile Solutions",
+		"type": "Logistics",
+		"status": "In Pool",
+		"funding_goal": "1200000",
+		"current_funding": "234000",
+		"reviewer": "James Wilson"
+	},
+	{
+		"id": 19,
+		"header": "MindCare - Mental Health App",
+		"type": "HealthTech",
+		"status": "Approved",
+		"funding_goal": "180000",
+		"current_funding": "134000",
+		"reviewer": "Dr. Michael Roberts"
+	},
+	{
+		"id": 20,
+		"header": "TechRecruit - AI Hiring Platform",
+		"type": "HR Tech",
+		"status": "In Review",
+		"funding_goal": "550000",
+		"current_funding": "0",
+		"reviewer": "Priya Singh"
+	},
+	{
+		"id": 21,
+		"header": "CleanWater - Purification System",
+		"type": "CleanTech",
+		"status": "In Pool",
+		"funding_goal": "650000",
+		"current_funding": "89000",
+		"reviewer": "Sarah Chen"
+	},
+	{
+		"id": 22,
+		"header": "SocialConnect - Community Platform",
+		"type": "Social Media",
+		"status": "Rejected",
+		"funding_goal": "300000",
+		"current_funding": "0",
+		"reviewer": "Emma Davis"
+	},
+	{
+		"id": 23,
+		"header": "DataViz - Analytics Dashboard",
+		"type": "Analytics",
+		"status": "Approved",
+		"funding_goal": "420000",
+		"current_funding": "267000",
+		"reviewer": "Michael Chen"
+	},
+	{
+		"id": 24,
+		"header": "RoboClean - Cleaning Robot",
+		"type": "Robotics",
+		"status": "In Review",
+		"funding_goal": "750000",
+		"current_funding": "0",
+		"reviewer": "Alex Thompson"
+	},
+	{
+		"id": 25,
+		"header": "StudyBuddy - Academic Collaboration",
+		"type": "EdTech",
+		"status": "In Pool",
+		"funding_goal": "220000",
+		"current_funding": "67000",
+		"reviewer": "Emma Davis"
+	},
+	{
+		"id": 26,
+		"header": "FlexWork - Remote Work Tools",
+		"type": "Productivity",
+		"status": "Approved",
+		"funding_goal": "380000",
+		"current_funding": "289000",
+		"reviewer": "Lisa Wong"
+	},
+	{
+		"id": 27,
+		"header": "PetCare - Veterinary Telehealth",
+		"type": "PetTech",
+		"status": "In Review",
+		"funding_goal": "275000",
+		"current_funding": "0",
+		"reviewer": "Nina Patel"
+	},
+	{
+		"id": 28,
+		"header": "BuildSmart - Construction Tech",
+		"type": "Construction",
+		"status": "Approved",
+		"funding_goal": "900000",
+		"current_funding": "445000",
+		"reviewer": "Carlos Rodriguez"
+	},
+	{
+		"id": 29,
+		"header": "ArtGen - AI Creative Tools",
+		"type": "Creative Tech",
+		"status": "In Pool",
+		"funding_goal": "350000",
+		"current_funding": "123000",
+		"reviewer": "Daniel Park"
+	},
+	{
+		"id": 30,
+		"header": "WasteZero - Recycling Optimizer",
+		"type": "Sustainability",
+		"status": "In Review",
+		"funding_goal": "480000",
+		"current_funding": "0",
+		"reviewer": "Sophia Martinez"
+	}
+]
