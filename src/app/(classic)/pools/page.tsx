@@ -1,191 +1,112 @@
 'use client';
 
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useInvestorPools } from '@/hooks/use-investor-pools';
 import { Button } from '@/components/ui/shadcn/button';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, Plus, HelpCircle } from 'lucide-react';
-import { PoolList } from './_components/pool-list';
-import { PoolsToolbar } from './_components/pools-toolbar';
-import { FiltersPanel } from './_components/filters-panel';
-import { ContributeModal } from './_components/contribute-modal';
-import { VoteModal } from './_components/vote-modal';
-import { PoolDetailDrawer } from './_components/pool-detail-drawer';
-import { usePools, useContribute, useVote } from '@/hooks/use-pools';
-import { useWallet } from '@/hooks/use-wallet';
-import type { Pool } from '@/lib/types';
+import { Calendar, Users, TrendingUp } from 'lucide-react';
+import { format } from 'date-fns';
+import Link from 'next/link';
 
 const queryClient = new QueryClient();
 
-function PoolsPageContent() {
-  const { data: pools = [], isLoading } = usePools();
-  const { wallet } = useWallet();
-  const contributeMutation = useContribute();
-  const voteMutation = useVote();
+function InvestorPoolsContent() {
+  const { data: pools = [], isLoading } = useInvestorPools();
 
-  const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
-  const [contributeModalOpen, setContributeModalOpen] = useState(false);
-  const [voteModalOpen, setVoteModalOpen] = useState(false);
-  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const platformStats = {
-    activePools: pools.filter((p) => p.status === 'active').length,
-    totalRaised: pools.reduce((sum, p) => sum + p.current_size, 0),
-    totalContributors: pools.reduce((sum, p) => sum + p.contributors_count, 0),
-  };
-
-  const handleContribute = (pool: Pool) => {
-    setSelectedPool(pool);
-    setContributeModalOpen(true);
-  };
-
-  const handleVote = (pool: Pool) => {
-    setSelectedPool(pool);
-    setVoteModalOpen(true);
-  };
-
-  const handleOpenDetail = (pool: Pool) => {
-    setSelectedPool(pool);
-    setDetailDrawerOpen(true);
-  };
-
-  const handleConfirmContribution = async (amount: number) => {
-    if (!selectedPool) return;
-    await contributeMutation.mutateAsync({
-      pool_id: selectedPool.id,
-      amount,
-      wallet_address: wallet.address || '',
-    });
-  };
-
-  const handleConfirmVote = async (proposalId: string, choice: string) => {
-    if (!selectedPool) return;
-    await voteMutation.mutateAsync({
-      pool_id: selectedPool.id,
-      proposal_id: proposalId,
-      choice,
-    });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-500/10 text-green-500';
+      case 'closed':
+        return 'bg-gray-500/10 text-gray-500';
+      case 'upcoming':
+        return 'bg-blue-500/10 text-blue-500';
+      default:
+        return 'bg-gray-500/10 text-gray-500';
+    }
   };
 
   return (
-    <>
-      <div>
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Investment Pools
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Discover and invest in curated startup portfolios
-              </p>
-              <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
-                <span>{platformStats.activePools} Active Pools</span>
-                <span>•</span>
-                <span>
-                  ${(platformStats.totalRaised / 1000000).toFixed(1)}M Raised
-                </span>
-                <span>•</span>
-                <span>
-                  {platformStats.totalContributors.toLocaleString()}{' '}
-                  Contributors
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm">
-                <HelpCircle className="h-5 w-5" />
-              </Button>
-              <Badge variant="outline" className="gap-2 px-3 py-2">
-                <Wallet className="h-4 w-4" />
-                <span className="font-mono">{wallet.address}</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="font-semibold">
-                  ${wallet.balance.toLocaleString()}
-                </span>
-              </Badge>
-              <Button className="bg-emerald-600 text-white hover:bg-emerald-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Pool
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="mb-2 text-3xl font-bold text-foreground">
+          Investment Pools
+        </h1>
+        <p className="text-muted-foreground">
+          Browse active investment pools and vote for your favorite startups
+        </p>
       </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <PoolsToolbar
-          onSearchChange={(search) => console.log('[v0] Search:', search)}
-          onTabChange={(tab) => console.log('[v0] Tab:', tab)}
-          onSortChange={(sort) => console.log('[v0] Sort:', sort)}
-          onToggleFilters={() => setFiltersOpen(!filtersOpen)}
-        />
-
-        <div className="mt-8">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-                <p className="text-sm text-muted-foreground">
-                  Loading pools...
-                </p>
-              </div>
-            </div>
-          ) : (
-            <PoolList
-              pools={pools}
-              onContribute={handleContribute}
-              onVote={handleVote}
-              onOpenDetail={handleOpenDetail}
-            />
-          )}
+      {/* Pools Grid */}
+      {isLoading ? (
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-muted-foreground">Loading pools...</div>
         </div>
-      </main>
+      ) : pools.length === 0 ? (
+        <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8">
+          <p className="text-lg text-muted-foreground">
+            No active pools at the moment
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Check back soon for new investment opportunities
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {pools.map((pool) => (
+            <Card key={pool.id} className="flex flex-col p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="mb-1 text-xl font-semibold">{pool.name}</h3>
+                  <Badge variant="outline" className="mb-2">
+                    {pool.category}
+                  </Badge>
+                </div>
+                <Badge className={getStatusColor(pool.status)}>
+                  {pool.status}
+                </Badge>
+              </div>
 
-      {/* Modals and Drawers */}
-      <FiltersPanel open={filtersOpen} onClose={() => setFiltersOpen(false)} />
+              <p className="mb-4 line-clamp-3 flex-1 text-sm text-muted-foreground">
+                {pool.description}
+              </p>
 
-      <ContributeModal
-        pool={selectedPool}
-        open={contributeModalOpen}
-        onOpenChange={setContributeModalOpen}
-        onConfirm={handleConfirmContribution}
-        walletBalance={wallet.balance as number}
-      />
+              <div className="mb-4 space-y-2 text-sm">
+                <div className="flex items-center text-muted-foreground">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span>
+                    Ends: {format(new Date(pool.votingDeadline), 'PPP')}
+                  </span>
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>{pool.startupCount} startups</span>
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  <span>{pool.voteCount} votes cast</span>
+                </div>
+              </div>
 
-      <VoteModal
-        pool={selectedPool}
-        open={voteModalOpen}
-        onOpenChange={setVoteModalOpen}
-        onConfirm={handleConfirmVote}
-      />
-
-      <PoolDetailDrawer
-        pool={selectedPool}
-        open={detailDrawerOpen}
-        onOpenChange={setDetailDrawerOpen}
-        onContribute={handleContribute}
-        onVote={handleVote}
-      />
-
-      {/* Overlay for filters */}
-      {filtersOpen && (
-        // biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
-        <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
-          onClick={() => setFiltersOpen(false)}
-        />
+              <Link href={`/pools/${pool.id}`} className="w-full">
+                <Button className="w-full">
+                  {pool.status === 'active' ? 'View & Vote' : 'View Results'}
+                </Button>
+              </Link>
+            </Card>
+          ))}
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
-export default function PoolsPage() {
+export default function InvestorPoolsPage() {
   return (
     <QueryClientProvider client={queryClient}>
-      <PoolsPageContent />
+      <InvestorPoolsContent />
     </QueryClientProvider>
   );
 }

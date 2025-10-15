@@ -43,20 +43,20 @@ export const defaultMenuItems = [
     name: 'Submit Pitch',
     icon: <PlusCircle />,
     href: routes.submitPitch,
-    dropdownItems: [
-      {
-        name: 'Upload Deck',
-        href: routes.submitDeck,
-      },
-      {
-        name: 'Pitch Video',
-        href: routes.submitVideo,
-      },
-      {
-        name: 'Details Form',
-        href: routes.submitDetails,
-      },
-    ],
+    // dropdownItems: [
+    //   {
+    //     name: 'Upload Deck',
+    //     href: routes.submitDeck,
+    //   },
+    //   {
+    //     name: 'Pitch Video',
+    //     href: routes.submitVideo,
+    //   },
+    //   {
+    //     name: 'Details Form',
+    //     href: routes.submitDetails,
+    //   },
+    // ],
   },
   {
     name: 'Pitch Management',

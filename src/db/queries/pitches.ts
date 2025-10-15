@@ -1,6 +1,7 @@
-import { eq, and, desc, asc } from 'drizzle-orm';
-import { db } from '../index';
-import { pitches, type NewPitch, type Pitch } from '../schema/pitches';
+import { and, asc, desc, eq } from "drizzle-orm";
+import { db } from "../index";
+import { type NewPitch, type Pitch, pitches } from "../schema/pitches";
+import { type User, users } from "../schema/users";
 
 /**
  * Get a pitch by ID
@@ -38,7 +39,7 @@ export async function getPitchesByUserId(userId: string): Promise<Pitch[]> {
  * Get all pitches with optional status filter
  */
 export async function getAllPitches(
-  status?: Pitch['status'],
+  status?: Pitch["status"],
 ): Promise<Pitch[]> {
   if (status) {
     return await db
@@ -89,7 +90,7 @@ export async function updatePitch(
  */
 export async function updatePitchStatus(
   id: string,
-  status: Pitch['status'],
+  status: Pitch["status"],
   reviewNotes?: string,
 ): Promise<Pitch | undefined> {
   const result = await db
@@ -131,4 +132,65 @@ export async function getPitchesByStage(stage: string): Promise<Pitch[]> {
     .from(pitches)
     .where(eq(pitches.companyStage, stage))
     .orderBy(desc(pitches.dateSubmitted));
+}
+
+/**
+ * Pitch with user details type
+ */
+export type PitchWithUser = Pitch & {
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+};
+
+/**
+ * Get all pitches with user details
+ */
+export async function getPitchesWithUserDetails(): Promise<PitchWithUser[]> {
+  const results = await db
+    .select({
+      pitch: pitches,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+    })
+    .from(pitches)
+    .innerJoin(users, eq(pitches.userId, users.id))
+    .orderBy(desc(pitches.dateSubmitted));
+
+  return results.map((result) => ({
+    ...result.pitch,
+    user: result.user,
+  }));
+}
+
+/**
+ * Get a single pitch with user details
+ */
+export async function getPitchWithUserDetails(
+  id: string,
+): Promise<PitchWithUser | undefined> {
+  const results = await db
+    .select({
+      pitch: pitches,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+    })
+    .from(pitches)
+    .innerJoin(users, eq(pitches.userId, users.id))
+    .where(eq(pitches.id, id));
+
+  if (results.length === 0) return undefined;
+
+  return {
+    ...results[0].pitch,
+    user: results[0].user,
+  };
 }

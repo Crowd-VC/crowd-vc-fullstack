@@ -212,7 +212,7 @@ export function PitchesGrid({ pitches }: { pitches: Pitch[] }) {
   return (
     <div
       ref={scrollRef}
-      className="scrollbar-hide grid h-auto grid-cols-1 gap-4 scroll-smooth px-12 py-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"
+      className="scrollbar-hide flex h-auto flex-wrap gap-4 scroll-smooth px-12 py-4"
       style={{
         overflowX: 'auto',
         overflowY: 'visible',

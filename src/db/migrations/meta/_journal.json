@@ -8,6 +8,20 @@
       "when": 1759666328710,
       "tag": "0000_silent_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1759835971982,
+      "tag": "0001_legal_baron_strucker",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759842516576,
+      "tag": "0002_fresh_madame_web",
+      "breakpoints": true
     }
   ]
 }
