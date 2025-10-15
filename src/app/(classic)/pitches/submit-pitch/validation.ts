@@ -116,12 +116,12 @@ export const mediaUploadSchema = z.object({
             (val) => !val || val === "" || /^https?:\/\/.+/.test(val),
             "Demo URL must be a valid URL",
         ),
-    prototypeUrl: z
+    socialUrl: z
         .string()
         .optional()
         .refine(
             (val) => !val || val === "" || /^https?:\/\/.+/.test(val),
-            "Prototype URL must be a valid URL",
+            "Social URL must be a valid URL",
         ),
 });
 
@@ -276,7 +276,7 @@ export const stepFieldKeys = {
         "pitchDeck",
         "pitchVideo",
         "demoUrl",
-        "prototypeUrl",
+        "socialUrl",
     ] as const,
     3: [
         "fundingGoal",

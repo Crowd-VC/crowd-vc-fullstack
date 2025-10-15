@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
     type CompleteFormData,
     completeFormSchema,
-    getStepSchema,
     getStepFields,
+    getStepSchema,
 } from "../validation";
 import type { FileUploadType } from "../types";
 import { usePitchesStore } from "@/lib/stores/pitches";
@@ -23,7 +23,7 @@ const initialFormData: CompleteFormData = {
     pitchDeck: undefined,
     pitchVideo: undefined,
     demoUrl: "",
-    prototypeUrl: "",
+    socialUrl: "",
     fundingGoal: DEFAULT_VALUES.FUNDING_GOAL,
     customAmount: "",
     productDevelopment: DEFAULT_VALUES.PRODUCT_DEVELOPMENT,
@@ -146,7 +146,7 @@ export const useFormState = () => {
                     ? `/uploads/${newSubmissionId}-video.mp4`
                     : undefined,
                 demoUrl: data.demoUrl,
-                prototypeUrl: data.prototypeUrl,
+                prototypeUrl: data.socialUrl,
             });
 
             // Log the complete form data including new fields

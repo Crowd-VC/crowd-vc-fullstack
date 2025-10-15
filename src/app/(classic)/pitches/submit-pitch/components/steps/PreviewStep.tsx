@@ -252,20 +252,20 @@ export function PreviewStep({ form, onEditStep }: PreviewStepProps) {
             <div>
               <h4 className="mb-1 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Link className="h-4 w-4" />
-                Prototype URL
+                Social URL
               </h4>
-              {formData.prototypeUrl ? (
+              {formData.socialUrl ? (
                 <a
-                  href={formData.prototypeUrl}
+                  href={formData.socialUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-primary hover:underline"
                 >
-                  {formData.prototypeUrl}
+                  {formData.socialUrl}
                 </a>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No prototype URL provided
+                  No social URL provided
                 </p>
               )}
             </div>

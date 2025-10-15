@@ -55,7 +55,7 @@ export function SuccessModal({
   };
 
   const handleViewDashboard = () => {
-    router.push('/dashboard');
+    router.push('/');
     onClose();
   };
 
