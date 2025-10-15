@@ -33,9 +33,7 @@ export function Navigation() {
                 </li>
               ))}
             </ul>
-            <Link href={routes.signIn}>
-              <AccessPlatformButton>Launch Platform</AccessPlatformButton>
-            </Link>
+            <AccessPlatformButton>Launch Platform</AccessPlatformButton>
           </div>
         </div>
       </div>
