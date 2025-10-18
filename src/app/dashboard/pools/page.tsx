@@ -90,7 +90,7 @@ function InvestorPoolsContent() {
                 </div>
               </div>
 
-              <Link href={`/pools/${pool.id}`} className="w-full">
+              <Link href={`/dashboard/pools/${pool.id}`} className="w-full">
                 <Button className="w-full">
                   {pool.status === 'active' ? 'View & Vote' : 'View Results'}
                 </Button>

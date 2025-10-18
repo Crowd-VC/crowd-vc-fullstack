@@ -22,6 +22,20 @@
       "when": 1759842516576,
       "tag": "0002_fresh_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1760565820383,
+      "tag": "0003_absurd_photon",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1760599460965,
+      "tag": "0004_ambitious_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

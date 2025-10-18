@@ -1,25 +1,24 @@
 import type { Pitch } from '@/db/schema/pitches';
-import { getAllPitches } from '@/db/queries/pitches';
+import { getPitchesByUserId } from '@/db/queries/pitches';
 import { PitchesGrid } from './_components/pitch-grid';
 
 // Main Page Component
 export default async function PitchesPage() {
+  const user = { id: 'user_2' };
   // Fetch pitches from database
-  const pitches = await getAllPitches();
+  const pitches = await getPitchesByUserId(user.id as string);
 
   // Group pitches by industry
-  const pitchesByIndustry = pitches
-    .filter((p) => p.industry === 'Entertainment')
-    .reduce(
-      (acc, pitch) => {
-        if (!acc[pitch.industry]) {
-          acc[pitch.industry] = [];
-        }
-        acc[pitch.industry].push(pitch);
-        return acc;
-      },
-      {} as Record<string, Pitch[]>,
-    );
+  const pitchesByIndustry = pitches.reduce(
+    (acc, pitch) => {
+      if (!acc[pitch.industry]) {
+        acc[pitch.industry] = [];
+      }
+      acc[pitch.industry].push(pitch);
+      return acc;
+    },
+    {} as Record<string, Pitch[]>,
+  );
 
   return (
     <div className="min-h-screen">

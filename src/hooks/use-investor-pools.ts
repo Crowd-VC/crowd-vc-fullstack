@@ -9,12 +9,26 @@ interface Pool {
     status: "active" | "closed" | "upcoming";
     startupCount: number;
     voteCount: number;
+    fundingGoal?: number;
+    currentFunding?: number;
+    minContribution?: number;
+    maxContribution?: number;
 }
 
 interface CastVoteData {
     poolId: string;
     pitchId: string;
     userId: string;
+    walletAddress: string;
+}
+
+interface ContributeData {
+    poolId: string;
+    userId: string;
+    walletAddress: string;
+    amount: number;
+    platformFee: number;
+    gasFee?: number;
 }
 
 /**
@@ -61,11 +75,13 @@ export function useCastVote() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ poolId, pitchId, userId }: CastVoteData) => {
+        mutationFn: async (
+            { poolId, pitchId, userId, walletAddress }: CastVoteData,
+        ) => {
             const response = await fetch(`/api/pools/${poolId}/vote`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pitchId, userId }),
+                body: JSON.stringify({ pitchId, userId, walletAddress }),
             });
 
             if (!response.ok) {
@@ -81,5 +97,76 @@ export function useCastVote() {
             });
             queryClient.invalidateQueries({ queryKey: ["investor-pools"] });
         },
+    });
+}
+
+/**
+ * Hook to contribute to a pool
+ */
+export function useContribute() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (data: ContributeData) => {
+            const response = await fetch("/api/contributions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Failed to contribute");
+            }
+
+            return response.json();
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["pool-details", variables.poolId],
+            });
+            queryClient.invalidateQueries({ queryKey: ["investor-pools"] });
+            queryClient.invalidateQueries({
+                queryKey: ["user-contributions", variables.userId],
+            });
+        },
+    });
+}
+
+/**
+ * Hook to fetch pool funding information
+ */
+export function usePoolFunding(poolId: string) {
+    return useQuery({
+        queryKey: ["pool-funding", poolId],
+        queryFn: async () => {
+            const response = await fetch(`/api/pools/${poolId}/funding`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch pool funding");
+            }
+            return response.json();
+        },
+        enabled: !!poolId,
+    });
+}
+
+/**
+ * Hook to fetch user's contributions
+ */
+export function useUserContributions(poolId?: string, userId?: string) {
+    return useQuery({
+        queryKey: ["user-contributions", poolId, userId],
+        queryFn: async () => {
+            const params = new URLSearchParams();
+            if (poolId) params.append("poolId", poolId);
+            if (userId) params.append("userId", userId);
+
+            const response = await fetch(`/api/contributions?${params}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch contributions");
+            }
+            return response.json();
+        },
+        enabled: !!(poolId || userId),
     });
 }

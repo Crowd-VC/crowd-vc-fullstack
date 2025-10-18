@@ -10,6 +10,9 @@ import {
   Star,
   AlertTriangle,
   Info,
+  Calendar,
+  Users,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Card,
@@ -23,7 +26,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useRef, useState } from 'react';
 import { usePitchesStore } from '@/lib/stores/pitches';
+import { useInvestorPools } from '@/hooks/use-investor-pools';
 import Image from 'next/image';
+import Link from 'next/link';
+import routes from '@/config/routes';
+import { format } from 'date-fns';
 
 // Animation constants
 const ANIMATION_DURATION = '300ms';
@@ -51,8 +58,8 @@ const statusConfig = {
 
 // Calculate days left
 function calculateDaysLeft(
-  dateSubmitted: string,
-  timeToRaise?: string,
+  dateSubmitted: Date | string,
+  timeToRaise?: string | null,
 ): number {
   if (!timeToRaise) return 0;
   const submitted = new Date(dateSubmitted);
@@ -113,230 +120,59 @@ function LargeFeaturedCard({ pitch }: { pitch: Pitch }) {
   const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
 
   return (
-    <Card
-      className="relative cursor-pointer overflow-visible pt-0"
-      style={{
-        transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-        boxShadow: isHovered
-          ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        zIndex: isHovered ? 10 : 1,
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Image section with progress bar at bottom */}
-      <CardHeader className="p-0">
-        <div className="relative h-[400px] overflow-hidden rounded-t-lg">
-          <Image
-            src={pitch.imageUrl || '/placeholder.svg'}
-            alt={pitch.title}
-            className="h-full w-full object-cover"
-            style={{
-              transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-            }}
-            width={768}
-            height={768}
-          />
-          <div className="absolute bottom-0 left-0 right-0">
-            <Progress
-              value={fundingPercentage}
-              className="h-2 rounded-none bg-black/20"
-            />
-          </div>
-        </div>
-      </CardHeader>
-
-      {/* Content section below image - fixed height to prevent layout shift */}
-      <CardContent className="space-y-4">
-        {/* Profile icon, title, and badge */}
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
-            <span className="text-xl font-bold text-white">
-              {pitch.title.charAt(0)}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <h2 className="text-2xl font-bold text-foreground">
-                {pitch.title}
-              </h2>
-              <StatusBadge status={pitch.status} />
-            </div>
-            <p className="line-clamp-1 text-muted-foreground">
-              {pitch.elevatorPitch}
-            </p>
-          </div>
-        </div>
-
-        {/* Time and funding info */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>
-            {daysLeft} days left • {fundingPercentage}% funded
-          </span>
-        </div>
-
-        {/* Expanded content - absolutely positioned to overlay below content */}
-        <div
-          className="space-y-3 overflow-hidden rounded-b-lg"
-          style={{
-            top: '100%',
-            maxHeight: isHovered ? '1000px' : '0',
-            opacity: isHovered ? 1 : 0,
-            transition: `max-height ${ANIMATION_DURATION} ${ANIMATION_EASING}, opacity ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-            boxShadow: isHovered
-              ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-              : 'none',
-          }}
-        >
-          <p className="text-sm leading-relaxed text-foreground">
-            {pitch.summary}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{pitch.industry}</Badge>
-            <Badge variant="outline">{pitch.location}</Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Small Featured Card Component
-function SmallFeaturedCard({ pitch }: { pitch: Pitch }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const fundingPercentage = calculateFundingPercentage(pitch.fundingGoal);
-  const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
-
-  return (
-    <Card
-      className="relative cursor-pointer overflow-visible rounded-lg pt-0"
-      style={{
-        transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-        boxShadow: isHovered
-          ? '0 20px 25px -5px rgba(0, 0, 0, 0.15)'
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        zIndex: isHovered ? 10 : 1,
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Image section with progress bar at bottom */}
-      <div className="relative h-auto max-h-[200px] overflow-hidden rounded-t-lg">
-        <Image
-          src={pitch.imageUrl || '/placeholder.svg'}
-          alt={pitch.title}
-          className="h-full w-full rounded-t-lg object-cover hover:rounded-t-none"
-          style={{
-            transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-          }}
-          width={320}
-          height={120}
-        />
-        <div className="absolute bottom-0 left-0 right-0">
-          <Progress
-            value={fundingPercentage}
-            className="h-1.5 rounded-none bg-black/20"
-          />
-        </div>
-      </div>
-
-      {/* Content section below image - fixed height */}
-      <div className="relative space-y-2 px-3 pb-3">
-        {/* Profile icon, title, and badge */}
-        <div className="flex items-start gap-2">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
-            <span className="text-sm font-bold text-white">
-              {pitch.title.charAt(0)}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="mb-0.5 flex items-center justify-between gap-1">
-              <h3 className="truncate text-sm font-bold text-foreground">
-                {pitch.title}
-              </h3>
-              <StatusBadge status={pitch.status} />
-            </div>
-            <p className="line-clamp-1 text-xs text-muted-foreground">
-              {pitch.elevatorPitch}
-            </p>
-          </div>
-        </div>
-
-        {/* Time and funding info */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span>
-            {daysLeft} days left • {fundingPercentage}% funded
-          </span>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// Regular Card Component (for carousels)
-function PitchCard({ pitch }: { pitch: Pitch }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const fundingPercentage = calculateFundingPercentage(pitch.fundingGoal);
-  const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
-
-  return (
-    <div className="relative w-[320px] flex-shrink-0">
+    <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
       <Card
-        className="cursor-pointer overflow-visible pt-0"
+        className="relative cursor-pointer overflow-visible pt-0"
         style={{
-          transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}, transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+          transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
           boxShadow: isHovered
             ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
             : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
-          zIndex: isHovered ? 20 : 1,
+          zIndex: isHovered ? 10 : 1,
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image section with progress bar at bottom */}
-        <div className="relative h-[200px] overflow-hidden rounded-t-lg">
-          <Image
-            src={pitch.imageUrl || '/placeholder.svg'}
-            alt={pitch.title}
-            className="h-full w-full rounded-t-lg object-cover"
-            style={{
-              transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
-              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-            }}
-            width={320}
-            height={200}
-          />
-          <div className="absolute bottom-0 left-0 right-0">
-            <Progress
-              value={fundingPercentage}
-              className="h-2 rounded-none bg-black/20"
+        <CardHeader className="p-0">
+          <div className="relative h-[400px] overflow-hidden rounded-t-lg">
+            <Image
+              src={pitch.imageUrl || '/placeholder.svg'}
+              alt={pitch.title}
+              className="h-full w-full object-cover"
+              style={{
+                transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+                transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+              }}
+              width={768}
+              height={768}
             />
+            <div className="absolute bottom-0 left-0 right-0">
+              <Progress
+                value={fundingPercentage}
+                className="h-2 rounded-none bg-black/20"
+              />
+            </div>
           </div>
-        </div>
+        </CardHeader>
 
         {/* Content section below image - fixed height to prevent layout shift */}
-        <div className="relative space-y-3 px-4 pb-4">
+        <CardContent className="space-y-4">
           {/* Profile icon, title, and badge */}
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
-              <span className="font-bold text-white">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
+              <span className="text-xl font-bold text-white">
                 {pitch.title.charAt(0)}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h3 className="text-lg font-bold text-foreground">
+                <h2 className="text-2xl font-bold text-foreground">
                   {pitch.title}
-                </h3>
+                </h2>
                 <StatusBadge status={pitch.status} />
               </div>
-              <p className="line-clamp-1 text-sm text-muted-foreground">
+              <p className="line-clamp-1 text-muted-foreground">
                 {pitch.elevatorPitch}
               </p>
             </div>
@@ -352,10 +188,10 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
 
           {/* Expanded content - absolutely positioned to overlay below content */}
           <div
-            className="left-0 right-0 space-y-3 overflow-hidden rounded-b-lg px-4 pb-4"
+            className="space-y-3 overflow-hidden rounded-b-lg"
             style={{
               top: '100%',
-              maxHeight: isHovered ? '500px' : '0',
+              maxHeight: isHovered ? '1000px' : '0',
               opacity: isHovered ? 1 : 0,
               transition: `max-height ${ANIMATION_DURATION} ${ANIMATION_EASING}, opacity ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
               boxShadow: isHovered
@@ -371,8 +207,328 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
               <Badge variant="outline">{pitch.location}</Badge>
             </div>
           </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+// Small Featured Card Component
+function SmallFeaturedCard({ pitch }: { pitch: Pitch }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const fundingPercentage = calculateFundingPercentage(pitch.fundingGoal);
+  const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
+
+  return (
+    <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+      <Card
+        className="relative cursor-pointer overflow-visible rounded-lg pt-0"
+        style={{
+          transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+          boxShadow: isHovered
+            ? '0 20px 25px -5px rgba(0, 0, 0, 0.15)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          zIndex: isHovered ? 10 : 1,
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Image section with progress bar at bottom */}
+        <div className="relative h-auto max-h-[200px] overflow-hidden rounded-t-lg">
+          <Image
+            src={pitch.imageUrl || '/placeholder.svg'}
+            alt={pitch.title}
+            className="h-full w-full rounded-t-lg object-cover hover:rounded-t-none"
+            style={{
+              transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+            }}
+            width={320}
+            height={120}
+          />
+          <div className="absolute bottom-0 left-0 right-0">
+            <Progress
+              value={fundingPercentage}
+              className="h-1.5 rounded-none bg-black/20"
+            />
+          </div>
+        </div>
+
+        {/* Content section below image - fixed height */}
+        <div className="relative space-y-2 px-3 pb-3">
+          {/* Profile icon, title, and badge */}
+          <div className="flex items-start gap-2">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
+              <span className="text-sm font-bold text-white">
+                {pitch.title.charAt(0)}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="mb-0.5 flex items-center justify-between gap-1">
+                <h3 className="truncate text-sm font-bold text-foreground">
+                  {pitch.title}
+                </h3>
+                <StatusBadge status={pitch.status} />
+              </div>
+              <p className="line-clamp-1 text-xs text-muted-foreground">
+                {pitch.elevatorPitch}
+              </p>
+            </div>
+          </div>
+
+          {/* Time and funding info */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>
+              {daysLeft} days left • {fundingPercentage}% funded
+            </span>
+          </div>
         </div>
       </Card>
+    </Link>
+  );
+}
+
+// Regular Card Component (for carousels)
+function PitchCard({ pitch }: { pitch: Pitch }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const fundingPercentage = calculateFundingPercentage(pitch.fundingGoal);
+  const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
+
+  return (
+    <div className="relative w-[320px] flex-shrink-0">
+      <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+        <Card
+          className="cursor-pointer overflow-visible pt-0"
+          style={{
+            transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}, transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+            boxShadow: isHovered
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+            zIndex: isHovered ? 20 : 1,
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Image section with progress bar at bottom */}
+          <div className="relative h-[200px] overflow-hidden rounded-t-lg">
+            <Image
+              src={pitch.imageUrl || '/placeholder.svg'}
+              alt={pitch.title}
+              className="h-full w-full rounded-t-lg object-cover"
+              style={{
+                transition: `transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+                transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+              }}
+              width={320}
+              height={200}
+            />
+            <div className="absolute bottom-0 left-0 right-0">
+              <Progress
+                value={fundingPercentage}
+                className="h-2 rounded-none bg-black/20"
+              />
+            </div>
+          </div>
+
+          {/* Content section below image - fixed height to prevent layout shift */}
+          <div className="relative space-y-3 px-4 pb-4">
+            {/* Profile icon, title, and badge */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
+                <span className="font-bold text-white">
+                  {pitch.title.charAt(0)}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <h3 className="text-lg font-bold text-foreground">
+                    {pitch.title}
+                  </h3>
+                  <StatusBadge status={pitch.status} />
+                </div>
+                <p className="line-clamp-1 text-sm text-muted-foreground">
+                  {pitch.elevatorPitch}
+                </p>
+              </div>
+            </div>
+
+            {/* Time and funding info */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>
+                {daysLeft} days left • {fundingPercentage}% funded
+              </span>
+            </div>
+
+            {/* Expanded content - absolutely positioned to overlay below content */}
+            <div
+              className="left-0 right-0 space-y-3 overflow-hidden rounded-b-lg px-4 pb-4"
+              style={{
+                top: '100%',
+                maxHeight: isHovered ? '500px' : '0',
+                opacity: isHovered ? 1 : 0,
+                transition: `max-height ${ANIMATION_DURATION} ${ANIMATION_EASING}, opacity ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+                boxShadow: isHovered
+                  ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  : 'none',
+              }}
+            >
+              <p className="text-sm leading-relaxed text-foreground">
+                {pitch.summary}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{pitch.industry}</Badge>
+                <Badge variant="outline">{pitch.location}</Badge>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Link>
+    </div>
+  );
+}
+
+// Pool Card Component
+interface Pool {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  votingDeadline: Date;
+  status: 'active' | 'closed' | 'upcoming';
+  startupCount: number;
+  voteCount: number;
+  fundingGoal?: number;
+  currentFunding?: number;
+}
+
+function PoolCard({ pool }: { pool: Pool }) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-500';
+      case 'closed':
+        return 'bg-gray-500';
+      case 'upcoming':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const fundingPercentage =
+    pool.fundingGoal && pool.currentFunding
+      ? Math.min(
+          100,
+          Math.round((pool.currentFunding / pool.fundingGoal) * 100),
+        )
+      : 0;
+
+  return (
+    <div className="relative w-[320px] flex-shrink-0">
+      <Link href={`/dashboard/pools/${pool.id}`}>
+        <Card
+          className="cursor-pointer overflow-visible pt-0"
+          style={{
+            transition: `box-shadow ${ANIMATION_DURATION} ${ANIMATION_EASING}, transform ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+            boxShadow: isHovered
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+            zIndex: isHovered ? 20 : 1,
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Header with gradient background */}
+          <div className="relative h-[160px] overflow-hidden rounded-t-lg bg-gradient-to-b from-gray-900 to-gray-800 p-6">
+            <div className="flex h-full flex-col justify-between">
+              <div className="flex items-start justify-between">
+                <Badge
+                  className={`${getStatusColor(pool.status)} border-0 text-white`}
+                >
+                  {pool.status}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-white/50 bg-white/10 text-white"
+                >
+                  {pool.category}
+                </Badge>
+              </div>
+              <h3 className="text-2xl font-bold text-white">{pool.name}</h3>
+            </div>
+            {fundingPercentage > 0 && (
+              <div className="absolute bottom-0 left-0 right-0">
+                <Progress
+                  value={fundingPercentage}
+                  className="h-1.5 rounded-none bg-white/20"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Content section */}
+          <div className="relative space-y-3 px-4 pb-4">
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {pool.description}
+            </p>
+
+            {/* Stats */}
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center text-muted-foreground">
+                <Calendar className="mr-2 h-4 w-4" />
+                <span className="text-xs">
+                  {format(new Date(pool.votingDeadline), 'PPP')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-muted-foreground">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span className="text-xs">{pool.startupCount} startups</span>
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  <span className="text-xs">{pool.voteCount} votes</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Expanded content on hover */}
+            <div
+              className="left-0 right-0 space-y-3 overflow-hidden rounded-b-lg px-4 pb-4"
+              style={{
+                top: '100%',
+                maxHeight: isHovered ? '500px' : '0',
+                opacity: isHovered ? 1 : 0,
+                transition: `max-height ${ANIMATION_DURATION} ${ANIMATION_EASING}, opacity ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
+                boxShadow: isHovered
+                  ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  : 'none',
+              }}
+            >
+              {fundingPercentage > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Funding Progress
+                    </span>
+                    <span className="font-semibold">{fundingPercentage}%</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    ${pool.currentFunding?.toLocaleString()} of $
+                    {pool.fundingGoal?.toLocaleString()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </Link>
     </div>
   );
 }
@@ -409,8 +565,43 @@ export function IndustryCarousel({ pitches }: { pitches: Pitch[] }) {
   );
 }
 
+// Pools Carousel Component
+export function PoolsCarousel({ pools }: { pools: Pool[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 340;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  return (
+    <div className="group relative -mx-12">
+      <div
+        ref={scrollRef}
+        className="scrollbar-hide flex h-auto gap-4 scroll-smooth px-12 py-4"
+        style={{
+          overflowX: 'auto',
+          overflowY: 'visible',
+        }}
+      >
+        {pools.map((pool) => (
+          <PoolCard key={pool.id} pool={pool} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Main Page Component
 export default function ClassicScreen({ pitches }: { pitches: Pitch[] }) {
+  // Fetch pools data
+  const { data: pools = [] } = useInvestorPools();
+
   // Get featured pitches
   const featuredPitches = pitches.filter((p) => p.featured);
   const mainFeatured = featuredPitches[0];
@@ -431,6 +622,14 @@ export default function ClassicScreen({ pitches }: { pitches: Pitch[] }) {
   return (
     <div className="min-h-screen">
       <main className="container space-y-12 px-4 py-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Featured Pitches
+          </h1>
+          <p className="text-muted-foreground">
+            Discover the latest and greatest pitches from our community.
+          </p>
+        </div>
         {/* Hero Section */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -442,6 +641,31 @@ export default function ClassicScreen({ pitches }: { pitches: Pitch[] }) {
             ))}
           </div>
         </section>
+
+        {/* Browse by Pools Section */}
+        {pools.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-foreground">
+                  Browse by Pools
+                </h2>
+                <p className="text-muted-foreground">
+                  Explore investment pools and vote for your favorite startups
+                </p>
+              </div>
+              <Link href="/dashboard/pools">
+                <Badge
+                  variant="outline"
+                  className="cursor-pointer hover:bg-accent"
+                >
+                  View All Pools →
+                </Badge>
+              </Link>
+            </div>
+            <PoolsCarousel pools={pools} />
+          </section>
+        )}
 
         {/* Industry Sections */}
         {Object.entries(pitchesByIndustry).map(

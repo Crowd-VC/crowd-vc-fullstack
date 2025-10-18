@@ -7,6 +7,8 @@ import { Calendar, DollarSign, Building2, Mail, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PitchWithUser } from '@/db/types';
 import { format } from 'date-fns';
+import Link from 'next/link';
+import routes from '@/config/routes';
 
 interface PitchReviewCardProps {
   pitch: PitchWithUser;
@@ -134,12 +136,10 @@ export function PitchReviewCard({
           >
             Review
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => onViewDetails(pitch)}
-            className="border-neutral-700"
-          >
-            Details
+          <Button variant="outline" className="border-neutral-700" asChild>
+            <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+              Details
+            </Link>
           </Button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { fira_code, kaleko105, inter } from './fonts';
 import { RootProvider } from '@/components/providers';
 
+import { Toaster } from '@/components/ui/sonner';
 // third party css files
 import 'overlayscrollbars/overlayscrollbars.css';
 import 'swiper/css';
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <RootProvider>{children}</RootProvider>
+        <Toaster />
       </body>
     </html>
   );

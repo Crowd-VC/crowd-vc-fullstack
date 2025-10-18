@@ -55,7 +55,7 @@ export function SuccessModal({
   };
 
   const handleViewDashboard = () => {
-    router.push('/');
+    router.push('/dashboard/pitches');
     onClose();
   };
 

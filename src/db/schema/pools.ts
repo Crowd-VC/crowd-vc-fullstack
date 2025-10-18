@@ -1,4 +1,11 @@
-import { boolean, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+    boolean,
+    integer,
+    pgEnum,
+    pgTable,
+    text,
+    timestamp,
+} from "drizzle-orm/pg-core";
 
 export const poolStatusEnum = pgEnum("pool_status", [
     "active",
@@ -13,6 +20,11 @@ export const pools = pgTable("pools", {
     category: text("category").notNull(), // e.g., 'FinTech', 'HealthTech', etc.
     votingDeadline: timestamp("voting_deadline").notNull(),
     status: poolStatusEnum("status").notNull().default("upcoming"),
+    // Funding fields
+    fundingGoal: integer("funding_goal").notNull().default(0),
+    currentFunding: integer("current_funding").notNull().default(0),
+    minContribution: integer("min_contribution").notNull().default(1000),
+    maxContribution: integer("max_contribution"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

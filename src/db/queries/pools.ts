@@ -41,6 +41,15 @@ export async function updatePoolStatus(
     return result[0];
 }
 
+export async function updatePoolCurrentFunding(poolId: string, amount: number) {
+    const result = await db
+        .update(pools)
+        .set({ currentFunding: sql`${pools.currentFunding} + ${amount}` })
+        .where(eq(pools.id, poolId))
+        .returning();
+    return result;
+}
+
 /**
  * Get startups in a pool with pitch details
  */
@@ -125,15 +134,21 @@ export async function castVote(
     poolId: string,
     pitchId: string,
     userId: string,
+    walletAddress: string,
 ) {
-    // Check if user already voted in this pool
+    // Check if wallet already voted in this pool
     const existingVote = await db
         .select()
         .from(votes)
-        .where(and(eq(votes.poolId, poolId), eq(votes.userId, userId)));
+        .where(
+            and(
+                eq(votes.poolId, poolId),
+                eq(votes.walletAddress, walletAddress),
+            ),
+        );
 
     if (existingVote.length > 0) {
-        throw new Error("You have already voted in this pool");
+        throw new Error("This wallet has already voted in this pool");
     }
 
     // Check if pool is active
@@ -169,7 +184,7 @@ export async function castVote(
     // Cast vote
     const result = await db
         .insert(votes)
-        .values({ id: voteId, poolId, pitchId, userId })
+        .values({ id: voteId, poolId, pitchId, userId, walletAddress })
         .returning();
 
     return result[0];
@@ -190,7 +205,41 @@ export async function getPoolVoteCounts(poolId: string) {
 }
 
 /**
- * Check if user has voted in a pool
+ * Check if wallet has voted in a pool
+ */
+export async function hasWalletVoted(poolId: string, walletAddress: string) {
+    const result = await db
+        .select()
+        .from(votes)
+        .where(
+            and(
+                eq(votes.poolId, poolId),
+                eq(votes.walletAddress, walletAddress),
+            ),
+        );
+
+    return result.length > 0;
+}
+
+/**
+ * Get wallet's vote in a pool
+ */
+export async function getWalletVote(poolId: string, walletAddress: string) {
+    const result = await db
+        .select()
+        .from(votes)
+        .where(
+            and(
+                eq(votes.poolId, poolId),
+                eq(votes.walletAddress, walletAddress),
+            ),
+        );
+
+    return result[0];
+}
+
+/**
+ * Check if user has voted in a pool (legacy - kept for backwards compatibility)
  */
 export async function hasUserVoted(poolId: string, userId: string) {
     const result = await db
@@ -202,7 +251,7 @@ export async function hasUserVoted(poolId: string, userId: string) {
 }
 
 /**
- * Get user's vote in a pool
+ * Get user's vote in a pool (legacy - kept for backwards compatibility)
  */
 export async function getUserVote(poolId: string, userId: string) {
     const result = await db

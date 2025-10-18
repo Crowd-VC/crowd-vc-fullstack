@@ -16,11 +16,12 @@ export const votes = pgTable(
         userId: text("user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
+        walletAddress: text("wallet_address").notNull(),
         votedAt: timestamp("voted_at").defaultNow().notNull(),
     },
     (table) => ({
-        // Ensure one vote per user per pool
-        pk: primaryKey({ columns: [table.userId, table.poolId] }),
+        // Ensure one vote per wallet per pool
+        pk: primaryKey({ columns: [table.walletAddress, table.poolId] }),
     }),
 );
 

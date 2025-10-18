@@ -12,10 +12,10 @@ export async function POST(
 ) {
     try {
         const body = await request.json();
-        const { pitchId, userId } = body;
+        const { pitchId, userId, walletAddress } = body;
         const { id } = await params;
 
-        if (!pitchId || !userId) {
+        if (!pitchId || !userId || !walletAddress) {
             return NextResponse.json(
                 { error: "Missing required fields" },
                 { status: 400 },
@@ -23,7 +23,7 @@ export async function POST(
         }
 
         const voteId = nanoid();
-        const vote = await castVote(voteId, id, pitchId, userId);
+        const vote = await castVote(voteId, id, pitchId, userId, walletAddress);
 
         return NextResponse.json(vote, { status: 201 });
     } catch (error) {

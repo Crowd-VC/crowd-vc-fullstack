@@ -6,7 +6,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push('/admin/pitches');
+    router.push('/dashboard/admin/pitches');
   }, [router]);
 
   return null;
