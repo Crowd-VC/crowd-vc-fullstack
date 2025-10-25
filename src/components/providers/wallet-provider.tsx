@@ -8,6 +8,7 @@ import {
 import { arbitrum, mainnet } from '@reown/appkit/networks';
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiProvider, cookieToInitialState } from 'wagmi';
+import { ReownAuthentication } from '@reown/appkit-siwx';
 
 const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig);
 
@@ -19,6 +20,7 @@ createAppKit({
   features: {
     analytics: true,
   },
+  siwx: new ReownAuthentication(),
 });
 
 export default function WalletProvider({
