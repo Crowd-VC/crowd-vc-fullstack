@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "ValidationLib",
+  "sourceName": "contracts/libraries/ValidationLib.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "DeadlineInPast",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EmptyArray",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDuration",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidFundingGoal",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidString",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220d783c5222b5f27eab27fabd69a3010a22191b51e9b76da156d47a2a09ad23fc964736f6c634300081c0033",
+  "deployedBytecode": "0x5f80fdfea2646970667358221220d783c5222b5f27eab27fabd69a3010a22191b51e9b76da156d47a2a09ad23fc964736f6c634300081c0033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/libraries/ValidationLib.sol",
+  "buildInfoId": "solc-0_8_28-a5f908ff89c8350670d816f7824223e212c1e0e2"
+}

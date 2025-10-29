@@ -1,0 +1,11 @@
+export { Navigation } from "./navigation";
+export { HeroSection } from "./hero-section";
+export { StatsSection } from "./stats-section";
+export { FeaturesSection } from "./features-section";
+export { ProcessSection } from "./process-section";
+export { PoolsSection } from "./pools-section";
+export { TechnologySection } from "./technology-section";
+export { TestimonialsSection } from "./testimonials-section";
+export { FAQSection } from "./faq-section";
+export { CTASection } from "./cta-section";
+export { Footer } from "./footer";
