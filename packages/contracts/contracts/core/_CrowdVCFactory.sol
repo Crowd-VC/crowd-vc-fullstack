@@ -13,19 +13,10 @@ import "./CrowdVCPool.sol";
 
 /**
  * @title CrowdVCFactory
- * @dev Gas-optimized upgradeable factory contract for CrowdVC platform
+ * @dev Main upgradeable factory contract for CrowdVC platform using TransparentUpgradeableProxy
  * @notice Handles user registration, pitch management, and pool deployment
- *
- * OPTIMIZATIONS APPLIED:
- * - Custom errors instead of require strings
- * - Storage variable packing
- * - Cached storage reads
- * - Immutable pool implementation
- * - Loop optimizations
- * - Event optimization
- * - Reduced redundant operations
  */
-contract CrowdVCFactory is
+contract CrowdVCFactoryOld is
     ICrowdVCFactory,
     Initializable,
     AccessControlUpgradeable,
@@ -34,24 +25,7 @@ contract CrowdVCFactory is
 {
     using ValidationLib for *;
 
-    // ============ CUSTOM ERRORS ============
-
-    error InvalidUserType();
-    error AlreadyRegistered();
-    error UserNotRegistered();
-    error InvalidType();
-    error PitchAlreadyExists();
-    error PitchDoesNotExist();
-    error PitchNotApproved();
-    error InvalidPool();
-    error PoolIdAlreadyExists();
-    error InvalidMaxContribution();
-    error TokenNotSupported();
-    error FeeTooHigh();
-    error PitchNotInPool();
-
-    // ============ CONSTANTS ============
-
+    // Constants
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant STARTUP_ROLE = keccak256("STARTUP_ROLE");
     bytes32 public constant INVESTOR_ROLE = keccak256("INVESTOR_ROLE");
@@ -62,49 +36,41 @@ contract CrowdVCFactory is
     uint256 public constant MAX_VOTING_DURATION = 30 days;
     uint256 public constant MIN_POOL_GOAL = 10_000 * 10**6; // 10k minimum
     uint256 public constant MAX_POOL_GOAL = 50_000_000 * 10**6; // 50M maximum
-    uint256 private constant MAX_PLATFORM_FEE = 1000; // 10%
 
-    // ============ STATE VARIABLES (PACKED) ============
-
-    // Slot 1: address (20 bytes) + uint16 (2 bytes) + uint32 (4 bytes) + uint64 (8 bytes) = 34 bytes (fits in 2 slots)
-    address public treasury;
-    uint16 public platformFeePercent; // Max 10000 basis points, uint16 sufficient
-    uint32 public version; // uint32 sufficient for version numbers
-
-    // Mappings (each takes separate slot)
+    // State variables
     mapping(address => UserProfile) private _users;
     mapping(bytes32 => PitchData) private _pitches;
     mapping(address => bool) private _isPools;
-    mapping(address => bytes32[]) private _userPitches;
-    mapping(address => bool) public supportedTokens;
-
-    // Pool ID mapping (using bytes32 instead of string for gas efficiency)
-    mapping(bytes32 => address) public poolIdToAddress;
-    mapping(address => bytes32) public poolAddressToId;
+    mapping(address => bytes32[]) private _userPitches; // startup => pitchIds[]
 
     address[] private _allPools;
+    address public treasury;
+    uint256 public platformFeePercent; // Basis points (500 = 5%)
+
+    // Supported tokens (USDT and USDC)
+    mapping(address => bool) public supportedTokens;
+
+    // Pool ID mapping (off-chain ID to contract address)
+    mapping(string => address) public poolIdToAddress;
+    mapping(address => string) public poolAddressToId;
 
     // Pool implementation for minimal proxy pattern (ERC-1167)
-    address public immutable poolImplementation;
+    address public poolImplementation;
 
-    // Nonce for pitch ID generation (prevents collision)
-    uint256 private _pitchNonce;
+    // Version
+    uint256 public version;
 
     /**
-     * @dev Storage gap for future upgrades (reduced to 40 slots after adding nonce)
+     * @dev Storage gap for future upgrades
+     * This reserves storage slots to allow adding new state variables in future versions
+     * without affecting the storage layout of child contracts
      */
-    uint256[40] private __gap;
-
-    // ============ CONSTRUCTOR ============
+    uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _poolImplementation) {
-        if (_poolImplementation == address(0)) revert ValidationLib.InvalidAddress();
-        poolImplementation = _poolImplementation;
+    constructor() {
         _disableInitializers();
     }
-
-    // ============ INITIALIZER ============
 
     /**
      * @dev Initialize the contract (replaces constructor for upgradeable contracts)
@@ -122,7 +88,7 @@ contract CrowdVCFactory is
         ValidationLib.validateAddress(_treasury);
         ValidationLib.validateAddress(_usdt);
         ValidationLib.validateAddress(_usdc);
-        if (_platformFee > MAX_PLATFORM_FEE) revert FeeTooHigh();
+        require(_platformFee <= 1000, "Fee too high"); // Max 10%
 
         __AccessControl_init();
         __Pausable_init();
@@ -132,11 +98,13 @@ contract CrowdVCFactory is
         _grantRole(ADMIN_ROLE, msg.sender);
 
         treasury = _treasury;
-        platformFeePercent = uint16(_platformFee);
+        platformFeePercent = _platformFee;
         supportedTokens[_usdt] = true;
         supportedTokens[_usdc] = true;
         version = 1;
-        _pitchNonce = 0;
+
+        // Deploy pool implementation contract for cloning
+        poolImplementation = address(new CrowdVCPool());
     }
 
     // ============ USER MANAGEMENT ============
@@ -151,8 +119,8 @@ contract CrowdVCFactory is
         override
         whenNotPaused
     {
-        if (userType == UserType.None || userType == UserType.Admin) revert InvalidUserType();
-        if (_users[msg.sender].userType != UserType.None) revert AlreadyRegistered();
+        require(userType != UserType.None && userType != UserType.Admin, "Invalid user type");
+        require(_users[msg.sender].userType == UserType.None, "Already registered");
         ValidationLib.validateString(metadataURI);
 
         _users[msg.sender] = UserProfile({
@@ -162,10 +130,9 @@ contract CrowdVCFactory is
             isActive: true
         });
 
-        // Grant role based on user type
         if (userType == UserType.Startup) {
             _grantRole(STARTUP_ROLE, msg.sender);
-        } else {
+        } else if (userType == UserType.Investor) {
             _grantRole(INVESTOR_ROLE, msg.sender);
         }
 
@@ -179,28 +146,19 @@ contract CrowdVCFactory is
         external
         onlyRole(ADMIN_ROLE)
     {
-        UserProfile storage userProfile = _users[user];
-        UserType oldType = userProfile.userType;
+        UserType oldType = _users[user].userType;
+        require(oldType != UserType.None, "User not registered");
+        require(newType != UserType.None, "Invalid type");
 
-        if (oldType == UserType.None) revert UserNotRegistered();
-        if (newType == UserType.None) revert InvalidType();
+        _users[user].userType = newType;
 
-        userProfile.userType = newType;
+        // Update roles
+        if (oldType == UserType.Startup) _revokeRole(STARTUP_ROLE, user);
+        else if (oldType == UserType.Investor) _revokeRole(INVESTOR_ROLE, user);
 
-        // Update roles efficiently
-        if (oldType == UserType.Startup) {
-            _revokeRole(STARTUP_ROLE, user);
-        } else if (oldType == UserType.Investor) {
-            _revokeRole(INVESTOR_ROLE, user);
-        }
-
-        if (newType == UserType.Startup) {
-            _grantRole(STARTUP_ROLE, user);
-        } else if (newType == UserType.Investor) {
-            _grantRole(INVESTOR_ROLE, user);
-        } else if (newType == UserType.Admin) {
-            _grantRole(ADMIN_ROLE, user);
-        }
+        if (newType == UserType.Startup) _grantRole(STARTUP_ROLE, user);
+        else if (newType == UserType.Investor) _grantRole(INVESTOR_ROLE, user);
+        else if (newType == UserType.Admin) _grantRole(ADMIN_ROLE, user);
 
         emit UserTypeUpdated(user, oldType, newType);
     }
@@ -218,14 +176,11 @@ contract CrowdVCFactory is
         string calldata title,
         string calldata ipfsHash,
         uint256 fundingGoal
-    ) external override whenNotPaused returns (bytes32) {
+    ) external override onlyRole(STARTUP_ROLE) whenNotPaused returns (bytes32) {
         ValidationLib.validatePitchData(title, ipfsHash, fundingGoal, MIN_FUNDING_GOAL, MAX_FUNDING_GOAL);
 
-        // Use nonce to prevent collision
-        bytes32 pitchId = keccak256(abi.encodePacked(msg.sender, title, block.timestamp, _pitchNonce++));
-
-        // This check should never fail with nonce, but keep for safety
-        if (_pitches[pitchId].startup != address(0)) revert PitchAlreadyExists();
+        bytes32 pitchId = keccak256(abi.encodePacked(msg.sender, title, block.timestamp));
+        require(_pitches[pitchId].startup == address(0), "Pitch already exists");
 
         _pitches[pitchId] = PitchData({
             pitchId: pitchId,
@@ -255,7 +210,7 @@ contract CrowdVCFactory is
         onlyRole(ADMIN_ROLE)
     {
         PitchData storage pitch = _pitches[pitchId];
-        if (pitch.startup == address(0)) revert PitchDoesNotExist();
+        require(pitch.startup != address(0), "Pitch does not exist");
 
         PitchStatus oldStatus = pitch.status;
         pitch.status = newStatus;
@@ -271,7 +226,7 @@ contract CrowdVCFactory is
 
     /**
      * @dev Create a new investment pool (admin only)
-     * @param poolId Off-chain database ID for the pool (as bytes32 for gas efficiency)
+     * @param poolId Off-chain database ID for the pool
      * @param name Pool name
      * @param category Pool category
      * @param fundingGoal Total funding goal for the pool
@@ -284,7 +239,7 @@ contract CrowdVCFactory is
      * @return poolAddress Address of the newly created pool
      */
     function createPool(
-        bytes32 poolId,
+        string calldata poolId,
         string calldata name,
         string calldata category,
         uint256 fundingGoal,
@@ -294,12 +249,8 @@ contract CrowdVCFactory is
         address acceptedToken,
         uint256 minContribution,
         uint256 maxContribution
-    ) external onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant returns (address) {
-        // Validate pool ID
-        if (poolId == bytes32(0)) revert ValidationLib.InvalidString();
-        if (poolIdToAddress[poolId] != address(0)) revert PoolIdAlreadyExists();
-
-        // Validate parameters
+    ) external override onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant returns (address) {
+        ValidationLib.validateString(poolId);
         ValidationLib.validatePoolParameters(
             name,
             fundingGoal,
@@ -312,20 +263,14 @@ contract CrowdVCFactory is
             MAX_VOTING_DURATION
         );
         ValidationLib.validateNonEmptyArray(candidatePitches);
+        require(supportedTokens[acceptedToken], "Token not supported");
+        require(poolIdToAddress[poolId] == address(0), "Pool ID already exists");
+        require(maxContribution == 0 || maxContribution >= minContribution, "Invalid max contribution");
 
-        if (!supportedTokens[acceptedToken]) revert TokenNotSupported();
-        if (maxContribution != 0 && maxContribution < minContribution) revert InvalidMaxContribution();
-
-        // Verify all pitches are approved (optimized loop)
-        uint256 pitchCount = candidatePitches.length;
-        for (uint256 i = 0; i < pitchCount;) {
-            bytes32 pitchId = candidatePitches[i];
-            PitchData storage pitch = _pitches[pitchId];
-
-            if (pitch.status != PitchStatus.Approved) revert PitchNotApproved();
-            pitch.status = PitchStatus.InPool;
-
-            unchecked { ++i; }
+        // Verify all pitches are approved
+        for (uint256 i = 0; i < candidatePitches.length; i++) {
+            require(_pitches[candidatePitches[i]].status == PitchStatus.Approved, "Pitch not approved");
+            _pitches[candidatePitches[i]].status = PitchStatus.InPool;
         }
 
         // Deploy new pool contract using minimal proxy (ERC-1167)
@@ -352,43 +297,9 @@ contract CrowdVCFactory is
         poolIdToAddress[poolId] = poolAddress;
         poolAddressToId[poolAddress] = poolId;
 
-        uint256 votingDeadline;
-        unchecked {
-            votingDeadline = block.timestamp + votingDuration;
-        }
-
-        emit PoolDeployed(string(abi.encodePacked(poolId)), poolAddress, votingDeadline, block.timestamp);
+        uint256 votingDeadline = block.timestamp + votingDuration;
+        emit PoolDeployed(poolId, poolAddress, votingDeadline, block.timestamp);
         return poolAddress;
-    }
-
-    /**
-     * @dev Create pool with string poolId (backward compatibility)
-     */
-    function createPool(
-        string calldata poolId,
-        string calldata name,
-        string calldata category,
-        uint256 fundingGoal,
-        uint256 votingDuration,
-        uint256 fundingDuration,
-        bytes32[] calldata candidatePitches,
-        address acceptedToken,
-        uint256 minContribution,
-        uint256 maxContribution
-    ) external override onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant returns (address) {
-        bytes32 poolIdBytes = keccak256(bytes(poolId));
-        return this.createPool(
-            poolIdBytes,
-            name,
-            category,
-            fundingGoal,
-            votingDuration,
-            fundingDuration,
-            candidatePitches,
-            acceptedToken,
-            minContribution,
-            maxContribution
-        );
     }
 
     /**
@@ -402,16 +313,13 @@ contract CrowdVCFactory is
         onlyRole(ADMIN_ROLE)
         whenNotPaused
     {
-        if (!_isPools[poolAddress]) revert InvalidPool();
-
-        PitchData storage pitch = _pitches[pitchId];
-        if (pitch.startup == address(0)) revert PitchDoesNotExist();
-        if (pitch.status != PitchStatus.Approved) revert PitchNotApproved();
-
+        require(_isPools[poolAddress], "Invalid pool");
+        require(_pitches[pitchId].status == PitchStatus.Approved, "Pitch not approved");
+        require(_pitches[pitchId].startup != address(0), "Pitch does not exist");
         ValidationLib.validateAddress(wallet);
 
         CrowdVCPool(poolAddress).addStartup(pitchId, wallet);
-        pitch.status = PitchStatus.InPool;
+        _pitches[pitchId].status = PitchStatus.InPool;
     }
 
     /**
@@ -424,13 +332,10 @@ contract CrowdVCFactory is
         onlyRole(ADMIN_ROLE)
         whenNotPaused
     {
-        if (!_isPools[poolAddress]) revert InvalidPool();
-
-        PitchData storage pitch = _pitches[pitchId];
-        if (pitch.status != PitchStatus.InPool) revert PitchNotInPool();
-
+        require(_isPools[poolAddress], "Invalid pool");
+        require(_pitches[pitchId].status == PitchStatus.InPool, "Pitch not in pool");
         CrowdVCPool(poolAddress).removeStartup(pitchId);
-        pitch.status = PitchStatus.Approved;
+        _pitches[pitchId].status = PitchStatus.Approved;
     }
 
     /**
@@ -438,7 +343,7 @@ contract CrowdVCFactory is
      * @param poolAddress Address of the pool to activate
      */
     function activatePool(address poolAddress) external onlyRole(ADMIN_ROLE) {
-        if (!_isPools[poolAddress]) revert InvalidPool();
+        require(_isPools[poolAddress], "Invalid pool");
         CrowdVCPool(poolAddress).activatePool();
     }
 
@@ -447,7 +352,7 @@ contract CrowdVCFactory is
      * @param poolAddress Address of the pool to pause
      */
     function pausePool(address poolAddress) external onlyRole(ADMIN_ROLE) {
-        if (!_isPools[poolAddress]) revert InvalidPool();
+        require(_isPools[poolAddress], "Invalid pool");
         CrowdVCPool(poolAddress).pausePool();
     }
 
@@ -456,7 +361,7 @@ contract CrowdVCFactory is
      * @param poolAddress Address of the pool to unpause
      */
     function unpausePool(address poolAddress) external onlyRole(ADMIN_ROLE) {
-        if (!_isPools[poolAddress]) revert InvalidPool();
+        require(_isPools[poolAddress], "Invalid pool");
         CrowdVCPool(poolAddress).unpausePool();
     }
 
@@ -465,7 +370,7 @@ contract CrowdVCFactory is
      * @param poolAddress Address of the pool
      */
     function emergencyWithdraw(address poolAddress) external onlyRole(ADMIN_ROLE) nonReentrant {
-        if (!_isPools[poolAddress]) revert InvalidPool();
+        require(_isPools[poolAddress], "Invalid pool");
         CrowdVCPool(poolAddress).emergencyWithdraw();
         emit EmergencyWithdrawal(poolAddress, block.timestamp);
     }
@@ -477,9 +382,9 @@ contract CrowdVCFactory is
      * @param newFee New fee in basis points (max 1000 = 10%)
      */
     function updatePlatformFee(uint256 newFee) external onlyRole(ADMIN_ROLE) {
-        if (newFee > MAX_PLATFORM_FEE) revert FeeTooHigh();
+        require(newFee <= 1000, "Fee too high");
         uint256 oldFee = platformFeePercent;
-        platformFeePercent = uint16(newFee);
+        platformFeePercent = newFee;
         emit PlatformFeeUpdated(oldFee, newFee);
     }
 
@@ -557,11 +462,11 @@ contract CrowdVCFactory is
         return _userPitches[startup];
     }
 
-    function getPoolAddress(bytes32 poolId) external view returns (address) {
+    function getPoolAddress(string calldata poolId) external view returns (address) {
         return poolIdToAddress[poolId];
     }
 
-    function getPoolId(address poolAddress) external view returns (bytes32) {
+    function getPoolId(address poolAddress) external view returns (string memory) {
         return poolAddressToId[poolAddress];
     }
 
@@ -570,12 +475,5 @@ contract CrowdVCFactory is
      */
     function getVersion() external view returns (uint256) {
         return version;
-    }
-
-    /**
-     * @dev Get pool implementation address
-     */
-    function getPoolImplementation() external view returns (address) {
-        return poolImplementation;
     }
 }

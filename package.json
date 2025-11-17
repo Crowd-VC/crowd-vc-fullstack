@@ -14,15 +14,19 @@
     "clean": "turbo run clean && rimraf -g \"node_modules\"",
     "web:dev": "turbo run dev --filter=@crowd-vc/web",
     "web:build": "turbo run build --filter=@crowd-vc/web",
-    "compile": "turbo run compile --filter=@crowd-vc/contracts",
-    "contracts:test": "turbo run test --filter=@crowd-vc/contracts",
-    "deploy": "turbo run deploy --filter=@crowd-vc/contracts",
     "db:generate": "cd apps/web && pnpm db:generate",
     "db:migrate": "cd apps/web && pnpm db:migrate",
     "db:push": "cd apps/web && pnpm db:push",
     "db:studio": "cd apps/web && pnpm db:studio",
     "db:seed": "cd apps/web && pnpm db:seed",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ignition:deploy": "npx hardhat ignition deploy ignition/modules/Proxy.ts --network base",
+    "ignition:upgrade": "npx hardhat ignition deploy ignition/modules/FactoryUpgrade.ts --network base",
+    "hardhat:build": "cd packages/contracts && npx hardhat build",
+    "hardhat:test": "cd packages/contracts && npx hardhat test",
+    "hardhat:node": "cd packages/contracts && npx hardhat node",
+    "hardhat:verify": "cd packages/contracts && npx hardhat verify",
+    "hardhat:clean": "cd packages/contracts && npx hardhat clean"
   },
   "devDependencies": {
     "husky": "^9.1.7",

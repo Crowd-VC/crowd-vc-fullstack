@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openzeppelin": {
+      "type": "streamable-http",
+      "url": "https://mcp.openzeppelin.com/contracts/solidity/mcp"
+    }
+  }
+}

@@ -95,9 +95,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
 
     /**
      * @dev Constructor sets factory address
+     * @notice Disables initialization on implementation contract to prevent attacks
      */
     constructor() ERC721("CrowdVC Pool Receipt", "CVCP") {
         factory = msg.sender;
+        // Prevent implementation contract from being initialized
+        _initialized = true;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -121,6 +124,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
         require(!_initialized, "Already initialized");
         require(msg.sender == factory, "Only factory");
         require(_maxContribution == 0 || _maxContribution >= _minContribution, "Invalid max contribution");
+        require(_fundingGoal > 0, "Invalid funding goal");
+        require(_votingDuration > 0 && _fundingDuration > 0, "Invalid durations");
+        require(_candidatePitches.length > 0, "No candidate pitches");
+        require(_acceptedToken != address(0), "Invalid token");
+        require(_treasury != address(0), "Invalid treasury");
+        require(_platformFeePercent <= 1000, "Fee too high"); // Max 10%
 
         poolName = _name;
         category = _category;
@@ -372,14 +381,14 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
 
             status = PoolStatus.Funded;
 
-            // Calculate total amount after platform fee and penalties
-            uint256 platformFee = FeeCalculator.calculatePlatformFee(totalContributions, platformFeePercent);
-            uint256 netAmount = totalContributions - platformFee + totalPenalties;
+            // Platform fees were already deducted during contributions (stored in totalPlatformFees)
+            // Calculate total distributable amount: original contributions - already collected fees + penalties
+            uint256 netAmount = totalContributions - totalPlatformFees + totalPenalties;
 
-            // Transfer platform fee to treasury (use first accepted token for now)
+            // Transfer accumulated platform fees to treasury (use first accepted token for now)
             address token = acceptedTokens.length > 0 ? acceptedTokens[0] : address(0);
-            if (platformFee > 0 && token != address(0)) {
-                IERC20(token).safeTransfer(treasury, platformFee);
+            if (totalPlatformFees > 0 && token != address(0)) {
+                IERC20(token).safeTransfer(treasury, totalPlatformFees);
             }
 
             // Calculate allocations for each winner
@@ -575,11 +584,20 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
         uint256 approvalsNeeded = (pitchVoteWeight * 51) / 100; // 51% threshold
         
         for (uint256 i = 0; i < milestones.length; i++) {
-            Milestone memory milestone = milestones[i];
-            milestone.approvalCount = 0;
-            milestone.approvalsNeeded = approvalsNeeded;
+            require(milestones[i].fundingPercent > 0, "Invalid milestone percentage");
             
-            _milestones[pitchId].push(milestone);
+            // Create a new milestone with proper initialization
+            _milestones[pitchId].push(Milestone({
+                description: milestones[i].description,
+                fundingPercent: milestones[i].fundingPercent,
+                deadline: milestones[i].deadline,
+                completed: false,
+                disputed: false,
+                evidenceURI: "",
+                approvalCount: 0,
+                approvalsNeeded: approvalsNeeded
+            }));
+            
             totalPercent += milestones[i].fundingPercent;
         }
 
