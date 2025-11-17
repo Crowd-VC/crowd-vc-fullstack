@@ -3,30 +3,40 @@ import { buildModule } from '@nomicfoundation/hardhat-ignition/modules';
 /**
  * CrowdVC Factory Deployment using TransparentUpgradeableProxy Pattern
  *
- * This module deploys:
+ * This is the main deployment module for the CrowdVC platform.
+ * It deploys the Factory contract with upgradeable proxy pattern.
+ *
+ * Deployed Contracts:
  * 1. ProxyAdmin - Admin contract for managing proxy upgrades
  * 2. CrowdVCFactory (Implementation) - The logic contract
  * 3. TransparentUpgradeableProxy - Proxy pointing to implementation
  *
- * The proxy is initialized with the factory's initialize() function
+ * Network-Specific Parameters:
+ * - BASE Mainnet: Use real USDT/USDC addresses
+ * - BASE Sepolia: Deploy mock tokens first (see MockTokens module)
+ * - Local Hardhat: Deploy mock tokens first (see MockTokens module)
+ *
+ * Usage:
+ * npx hardhat ignition deploy ignition/modules/Factory.ts --network baseSepolia --parameters ignition/parameters/baseSepolia.json
  */
 export default buildModule('FactoryModule', (m) => {
   // Get deployment parameters
   const deployer = m.getAccount(0);
 
-  // These should be configured for your target network
-  // BASE Mainnet addresses:
-  const USDT_BASE = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'; // Tether USD on BASE
-  const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USD Coin on BASE
+  // Network-specific token addresses
+  // BASE Mainnet addresses (default):
+  const USDT_BASE_MAINNET = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2';
+  const USDC_BASE_MAINNET = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-  // For testnets, you'll need to deploy mock tokens or use testnet addresses
+  // Parameters - can be overridden via JSON file
   const treasury = m.getParameter('treasury', deployer);
-  const platformFee = m.getParameter('platformFee', 500); // 5% default
-  const usdt = m.getParameter('usdt', USDT_BASE);
-  const usdc = m.getParameter('usdc', USDC_BASE);
+  const platformFee = m.getParameter('platformFee', 500); // 5% default (500 basis points)
+  const usdt = m.getParameter('usdt', USDT_BASE_MAINNET);
+  const usdc = m.getParameter('usdc', USDC_BASE_MAINNET);
 
   // Step 1: Deploy ProxyAdmin
   // This contract will be the admin of the TransparentUpgradeableProxy
+  // Only the ProxyAdmin owner can upgrade the proxy
   const proxyAdmin = m.contract('ProxyAdmin', [], {
     id: 'ProxyAdmin',
   });
@@ -37,6 +47,7 @@ export default buildModule('FactoryModule', (m) => {
   });
 
   // Step 3: Encode the initialize function call
+  // This will be called atomically when deploying the proxy
   const initializeData = m.encodeFunctionCall(
     factoryImplementation,
     'initialize',
@@ -44,6 +55,7 @@ export default buildModule('FactoryModule', (m) => {
   );
 
   // Step 4: Deploy TransparentUpgradeableProxy
+  // The proxy delegates all calls to the implementation contract
   const proxy = m.contract(
     'TransparentUpgradeableProxy',
     [factoryImplementation, proxyAdmin, initializeData],
@@ -62,6 +74,6 @@ export default buildModule('FactoryModule', (m) => {
     proxyAdmin,
     factoryImplementation,
     proxy,
-    factory, // This is the main contract you'll interact with
+    factory, // This is the main contract address you'll use in your frontend
   };
 });

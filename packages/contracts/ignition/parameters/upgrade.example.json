@@ -1,0 +1,7 @@
+{
+  "FactoryUpgradeModule": {
+    "proxyAddress": "0x0000000000000000000000000000000000000000",
+    "proxyAdminAddress": "0x0000000000000000000000000000000000000000",
+    "needsReinitialize": false
+  }
+}
