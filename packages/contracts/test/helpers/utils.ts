@@ -1,6 +1,12 @@
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { keccak256, encodePacked, Address } from "viem";
+import { network } from "hardhat";
 import hre from "hardhat";
+
+// Get network helpers
+const getNetworkHelpers = async () => {
+  const connection = await network.connect();
+  return connection.networkHelpers;
+};
 
 /**
  * Time Manipulation Functions
@@ -12,6 +18,7 @@ import hre from "hardhat";
  * @returns The new timestamp after increase
  */
 export async function increaseTime(seconds: number): Promise<number> {
+  const { time } = await getNetworkHelpers();
   await time.increase(seconds);
   return await time.latest();
 }
@@ -21,6 +28,7 @@ export async function increaseTime(seconds: number): Promise<number> {
  * @param blocks Number of blocks to mine
  */
 export async function mineBlocks(blocks: number): Promise<void> {
+  const { time } = await getNetworkHelpers();
   for (let i = 0; i < blocks; i++) {
     await time.increase(1);
   }
@@ -31,6 +39,7 @@ export async function mineBlocks(blocks: number): Promise<void> {
  * @returns Current block timestamp
  */
 export async function getLatestBlockTimestamp(): Promise<number> {
+  const { time } = await getNetworkHelpers();
   return await time.latest();
 }
 
@@ -39,6 +48,7 @@ export async function getLatestBlockTimestamp(): Promise<number> {
  * @param timestamp The timestamp to set
  */
 export async function setNextBlockTimestamp(timestamp: number): Promise<void> {
+  const { time } = await getNetworkHelpers();
   await time.setNextBlockTimestamp(timestamp);
 }
 

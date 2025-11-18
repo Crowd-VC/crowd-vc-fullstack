@@ -1,13 +1,21 @@
+import { network } from "hardhat";
 import hre from "hardhat";
-import { Address } from "viem";
+import { Address, keccak256, toHex } from "viem";
+
+// Get viem instance from network connection
+const getViem = async () => {
+  const connection = await network.connect();
+  return connection.viem;
+};
 
 /**
  * Deploys mock USDT and USDC tokens for testing
  * @returns Mock token contract instances and addresses
  */
 export async function deployMockTokensFixture() {
-  const usdt = await hre.viem.deployContract("MockUSDT");
-  const usdc = await hre.viem.deployContract("MockUSDC");
+  const viem = await getViem();
+  const usdt = await viem.deployContract("MockUSDT");
+  const usdc = await viem.deployContract("MockUSDC");
 
   return {
     usdt,
@@ -23,15 +31,16 @@ export async function deployMockTokensFixture() {
  * @returns Factory contract, tokens, and relevant addresses
  */
 export async function deployFactoryFixture() {
-  const [admin, treasury, ...others] = await hre.viem.getWalletClients();
-  const publicClient = await hre.viem.getPublicClient();
+  const viem = await getViem();
+  const [admin, treasury, ...others] = await viem.getWalletClients();
+  const publicClient = await viem.getPublicClient();
 
   // Deploy mock tokens
   const { usdt, usdc, usdtAddress, usdcAddress } =
     await deployMockTokensFixture();
 
   // Deploy CrowdVCFactory
-  const factory = await hre.viem.deployContract("CrowdVCFactory");
+  const factory = await viem.deployContract("CrowdVCFactory");
 
   // Initialize factory with treasury, platform fee (500 basis points = 5%), and supported tokens
   const platformFee = 500; // 5%
@@ -160,8 +169,13 @@ export async function submitPitchesFixture() {
   const receipt1 = await fixtureData.publicClient.waitForTransactionReceipt({
     hash: tx1,
   });
+  // Get event topic by calculating keccak256 hash of the event signature
+  const pitchSubmittedEventAbi = factory.abi.find((item: any) => item.name === "PitchSubmitted");
+  const pitchSubmittedTopic = pitchSubmittedEventAbi
+    ? keccak256(toHex(`${pitchSubmittedEventAbi.name}(${pitchSubmittedEventAbi.inputs.map((i: any) => i.type).join(',')})`))
+    : undefined;
   const pitchSubmittedEvent1 = receipt1.logs.find(
-    (log) => log.topics[0] === factory.abi.find((item: any) => item.name === "PitchSubmitted")?.signature
+    (log) => log.topics[0] === pitchSubmittedTopic
   );
   if (pitchSubmittedEvent1) {
     pitchIds.push(pitchSubmittedEvent1.topics[1] as `0x${string}`);
@@ -180,7 +194,7 @@ export async function submitPitchesFixture() {
     hash: tx2,
   });
   const pitchSubmittedEvent2 = receipt2.logs.find(
-    (log) => log.topics[0] === factory.abi.find((item: any) => item.name === "PitchSubmitted")?.signature
+    (log) => log.topics[0] === pitchSubmittedTopic
   );
   if (pitchSubmittedEvent2) {
     pitchIds.push(pitchSubmittedEvent2.topics[1] as `0x${string}`);
@@ -199,7 +213,7 @@ export async function submitPitchesFixture() {
     hash: tx3,
   });
   const pitchSubmittedEvent3 = receipt3.logs.find(
-    (log) => log.topics[0] === factory.abi.find((item: any) => item.name === "PitchSubmitted")?.signature
+    (log) => log.topics[0] === pitchSubmittedTopic
   );
   if (pitchSubmittedEvent3) {
     pitchIds.push(pitchSubmittedEvent3.topics[1] as `0x${string}`);
@@ -261,8 +275,12 @@ export async function deployPoolFixture() {
   const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
 
   // Extract pool address from PoolCreated event
+  const poolCreatedEventAbi = factory.abi.find((item: any) => item.name === "PoolCreated");
+  const poolCreatedTopic = poolCreatedEventAbi
+    ? keccak256(toHex(`${poolCreatedEventAbi.name}(${poolCreatedEventAbi.inputs.map((i: any) => i.type).join(',')})`))
+    : undefined;
   const poolCreatedEvent = receipt.logs.find(
-    (log) => log.topics[0] === factory.abi.find((item: any) => item.name === "PoolCreated")?.signature
+    (log) => log.topics[0] === poolCreatedTopic
   );
 
   if (!poolCreatedEvent) {
@@ -272,7 +290,8 @@ export async function deployPoolFixture() {
   const poolAddress = `0x${poolCreatedEvent.topics[1]?.slice(26)}` as Address;
 
   // Get pool contract instance
-  const pool = await hre.viem.getContractAt("CrowdVCPool", poolAddress);
+  const viem = await getViem();
+  const pool = await viem.getContractAt("CrowdVCPool", poolAddress);
 
   // Verify pool is initialized
   const poolInfo = await pool.read.getPoolInfo();
@@ -343,8 +362,12 @@ export async function createActivePoolFixture() {
     const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
 
     // Extract NFT token ID from event
+    const contributionEventAbi = pool.abi.find((item: any) => item.name === "ContributionReceived");
+    const contributionTopic = contributionEventAbi
+      ? keccak256(toHex(`${contributionEventAbi.name}(${contributionEventAbi.inputs.map((i: any) => i.type).join(',')})`))
+      : undefined;
     const contributionEvent = receipt.logs.find(
-      (log) => log.topics[0] === pool.abi.find((item: any) => item.name === "ContributionReceived")?.signature
+      (log) => log.topics[0] === contributionTopic
     );
 
     let tokenId = BigInt(0);

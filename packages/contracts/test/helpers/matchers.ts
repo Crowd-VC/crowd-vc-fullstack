@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Address, decodeEventLog } from "viem";
+import { type Address, decodeEventLog } from "viem";
 
 /**
  * Event Assertion Helpers
@@ -17,10 +17,10 @@ export function expectEvent(
   receipt: any,
   contractAbi: any[],
   eventName: string,
-  expectedArgs?: Record<string, any>
+  expectedArgs?: Record<string, any>,
 ): any {
   const eventAbi = contractAbi.find(
-    (item) => item.type === "event" && item.name === eventName
+    (item) => item.type === "event" && item.name === eventName,
   );
 
   if (!eventAbi) {
@@ -53,7 +53,7 @@ export function expectEvent(
     for (const [key, value] of Object.entries(expectedArgs)) {
       expect(
         decoded.args[key],
-        `Event ${eventName} argument ${key} does not match expected value`
+        `Event ${eventName} argument ${key} does not match expected value`,
       ).to.equal(value);
     }
   }
@@ -73,7 +73,7 @@ export function expectEventWithArgs(
   receipt: any,
   contractAbi: any[],
   eventName: string,
-  argChecks: Record<string, (value: any) => boolean>
+  argChecks: Record<string, (value: any) => boolean>,
 ): any {
   const matchingLog = expectEvent(receipt, contractAbi, eventName);
 
@@ -86,7 +86,7 @@ export function expectEventWithArgs(
   for (const [key, checkFn] of Object.entries(argChecks)) {
     expect(
       checkFn(decoded.args[key]),
-      `Event ${eventName} argument ${key} failed custom validation`
+      `Event ${eventName} argument ${key} failed custom validation`,
     ).to.be.true;
   }
 
@@ -102,7 +102,7 @@ export function expectEventWithArgs(
 export function expectNoEvent(
   receipt: any,
   contractAbi: any[],
-  eventName: string
+  eventName: string,
 ): void {
   const matchingLog = receipt.logs.find((log: any) => {
     try {
@@ -132,7 +132,7 @@ export function expectNoEvent(
  */
 export async function expectRevert(
   promise: Promise<any>,
-  expectedError?: string | RegExp
+  expectedError?: string | RegExp,
 ): Promise<void> {
   try {
     await promise;
@@ -142,12 +142,12 @@ export async function expectRevert(
       if (typeof expectedError === "string") {
         expect(
           error.message,
-          `Expected error message to contain "${expectedError}"`
+          `Expected error message to contain "${expectedError}"`,
         ).to.include(expectedError);
       } else {
         expect(
           error.message,
-          `Expected error message to match pattern ${expectedError}`
+          `Expected error message to match pattern ${expectedError}`,
         ).to.match(expectedError);
       }
     }
@@ -161,7 +161,7 @@ export async function expectRevert(
  */
 export async function expectCustomError(
   promise: Promise<any>,
-  errorName: string
+  errorName: string,
 ): Promise<void> {
   await expectRevert(promise, new RegExp(errorName));
 }
@@ -175,7 +175,7 @@ export async function expectCustomError(
 export async function expectAccessControlRevert(
   promise: Promise<any>,
   account: Address,
-  role: string
+  role: string,
 ): Promise<void> {
   try {
     await promise;
@@ -186,7 +186,7 @@ export async function expectAccessControlRevert(
         msg.includes("AccessControl") ||
         msg.includes(account) ||
         msg.includes(role),
-      `Expected AccessControl error for account ${account} and role ${role}`
+      `Expected AccessControl error for account ${account} and role ${role}`,
     );
   }
 }
@@ -204,10 +204,10 @@ export async function expectAccessControlRevert(
 export function expectBigIntEqual(
   actual: bigint,
   expected: bigint,
-  message?: string
+  message?: string,
 ): void {
   expect(actual, message || `Expected ${actual} to equal ${expected}`).to.equal(
-    expected
+    expected,
   );
 }
 
@@ -222,13 +222,13 @@ export function expectBigIntCloseTo(
   actual: bigint,
   expected: bigint,
   delta: bigint,
-  message?: string
+  message?: string,
 ): void {
   const diff = actual > expected ? actual - expected : expected - actual;
   expect(
     diff <= delta,
     message ||
-      `Expected ${actual} to be within ${delta} of ${expected}, but difference is ${diff}`
+      `Expected ${actual} to be within ${delta} of ${expected}, but difference is ${diff}`,
   ).to.be.true;
 }
 
@@ -241,7 +241,7 @@ export function expectBigIntCloseTo(
 export function expectArrayEqual(
   actual: any[],
   expected: any[],
-  message?: string
+  message?: string,
 ): void {
   expect(actual, message || "Arrays do not match").to.deep.equal(expected);
 }
@@ -259,7 +259,7 @@ export function expectArrayEqual(
 export async function expectRoleGranted(
   contract: any,
   role: `0x${string}`,
-  account: Address
+  account: Address,
 ): Promise<void> {
   const hasRole = await contract.read.hasRole([role, account]);
   expect(hasRole, `Expected account ${account} to have role ${role}`).to.be
@@ -275,7 +275,7 @@ export async function expectRoleGranted(
 export async function expectRoleRevoked(
   contract: any,
   role: `0x${string}`,
-  account: Address
+  account: Address,
 ): Promise<void> {
   const hasRole = await contract.read.hasRole([role, account]);
   expect(hasRole, `Expected account ${account} to NOT have role ${role}`).to.be
@@ -289,7 +289,7 @@ export async function expectRoleRevoked(
  */
 export async function expectPoolStatus(
   pool: any,
-  expectedStatus: number
+  expectedStatus: number,
 ): Promise<void> {
   const poolInfo = await pool.read.getPoolInfo();
   const actualStatus = poolInfo[7]; // Status is the 8th field in PoolInfo struct
@@ -300,7 +300,7 @@ export async function expectPoolStatus(
 
   expect(
     actualStatus,
-    `Expected pool status to be ${expectedStatusName} (${expectedStatus}), but got ${actualStatusName} (${actualStatus})`
+    `Expected pool status to be ${expectedStatusName} (${expectedStatus}), but got ${actualStatusName} (${actualStatus})`,
   ).to.equal(expectedStatus);
 }
 
@@ -313,7 +313,7 @@ export async function expectPoolStatus(
 export async function expectPitchStatus(
   factory: any,
   pitchId: `0x${string}`,
-  expectedStatus: number
+  expectedStatus: number,
 ): Promise<void> {
   const pitchData = await factory.read.getPitchById([pitchId]);
   const actualStatus = pitchData[5]; // Status is the 6th field in PitchData struct
@@ -331,7 +331,7 @@ export async function expectPitchStatus(
 
   expect(
     actualStatus,
-    `Expected pitch status to be ${expectedStatusName} (${expectedStatus}), but got ${actualStatusName} (${actualStatus})`
+    `Expected pitch status to be ${expectedStatusName} (${expectedStatus}), but got ${actualStatusName} (${actualStatus})`,
   ).to.equal(expectedStatus);
 }
 
@@ -344,7 +344,7 @@ export async function expectPitchStatus(
 export async function expectUserType(
   factory: any,
   userAddress: Address,
-  expectedUserType: number
+  expectedUserType: number,
 ): Promise<void> {
   const userProfile = await factory.read.getUserProfile([userAddress]);
   const actualUserType = userProfile[0]; // UserType is the 1st field in UserProfile struct
@@ -355,6 +355,6 @@ export async function expectUserType(
 
   expect(
     actualUserType,
-    `Expected user type to be ${expectedUserTypeName} (${expectedUserType}), but got ${actualUserTypeName} (${actualUserType})`
+    `Expected user type to be ${expectedUserTypeName} (${expectedUserType}), but got ${actualUserTypeName} (${actualUserType})`,
   ).to.equal(expectedUserType);
 }
