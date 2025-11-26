@@ -3,7 +3,7 @@
  * Auto-generated from compiled Hardhat artifacts
  */
 
-import factoryArtifact from '../../../apps/contracts/artifacts/contracts/core/CrowdVCFactory.sol/CrowdVCFactory.json'
+import factoryArtifact from '../../contracts/artifacts/contracts/core/CrowdVCFactory.sol/CrowdVCFactory.json'
 
 export const CrowdVCFactoryABI = factoryArtifact.abi
 

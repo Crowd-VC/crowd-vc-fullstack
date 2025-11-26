@@ -10,11 +10,13 @@ export default function FileInput({
 	label,
 	multiple,
 	accept,
+	onFilesChange,
 }: {
 	className?: string;
 	label?: React.ReactNode;
 	multiple?: boolean;
 	accept?: "all" | "img" | "pdf" | "csv" | "imgAndPdf";
+	onFilesChange?: (files: File[]) => void;
 }) {
 	const multiRef = useRef<HTMLInputElement>(null);
 	const [multiImages, setMultiImages] = useState<Array<File>>([]);
@@ -28,12 +30,17 @@ export default function FileInput({
 				if (file[1].type.includes("image")) return file[1];
 			})
 			.filter((file) => file !== undefined);
-		setMultiImages((prevFiles) => [...prevFiles, ...newFiles]);
+		setMultiImages((prevFiles) => {
+			const updated = [...prevFiles, ...newFiles];
+			onFilesChange?.(updated);
+			return updated;
+		});
 	};
 
 	const handleMultiImageDelete = (index: number) => {
 		const updatedFiles = multiImages.filter((_, i) => i !== index);
 		setMultiImages(updatedFiles);
+		onFilesChange?.(updatedFiles);
 		(multiRef.current as HTMLInputElement).value = "";
 	};
 	return (

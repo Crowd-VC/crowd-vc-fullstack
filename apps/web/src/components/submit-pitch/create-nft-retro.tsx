@@ -18,6 +18,10 @@ import Preview from "@/components/submit-pitch/nft-preview";
 import PriceType from "@/components/submit-pitch/price-types-props";
 import FileInput from "@/components/ui/file-input";
 import cn from "@/utils/cn";
+import { useSubmitPitch } from "@/hooks/use-factory";
+import { usePinataUpload } from "@/hooks/use-pinata-upload";
+import { parseEther } from "viem";
+import { toast } from "sonner";
 
 const BlockchainOptions = [
 	{
@@ -40,6 +44,49 @@ export default function CreateNFTRetro() {
 	const [unlocked, setUnlocked] = useState(false);
 	const [priceType, setPriceType] = useState("fixed");
 	const [blockchain, setBlockChain] = useState(BlockchainOptions[0]);
+	const [title, setTitle] = useState("");
+	const [description, setDescription] = useState("");
+	const [fundingGoal, setFundingGoal] = useState("");
+	const [files, setFiles] = useState<File[]>([]);
+
+	const { submitPitch, isPending: isTxPending } = useSubmitPitch();
+	const { uploadToPinata, isUploading } = usePinataUpload();
+
+	const isLoading = isTxPending || isUploading;
+
+	const handleSubmit = async () => {
+		if (!title || !fundingGoal || files.length === 0) {
+			toast.error("Please fill in all required fields");
+			return;
+		}
+
+		try {
+			// 1. Upload to Pinata
+			const metadata = {
+				title,
+				description,
+				fundingGoal
+			};
+
+			const uploadResult = await uploadToPinata(files[0], metadata);
+
+			if (!uploadResult.success || !uploadResult.metadataCid) {
+				toast.error("Failed to upload to IPFS");
+				return;
+			}
+
+			// 2. Submit to Smart Contract
+			submitPitch(
+				title,
+				uploadResult.metadataCid,
+				parseEther(fundingGoal)
+			);
+
+		} catch (error) {
+			console.error(error);
+			toast.error("Something went wrong");
+		}
+	};
 
 	return (
 		<>
@@ -55,7 +102,7 @@ export default function CreateNFTRetro() {
 					<div className="relative">
 						<div className="mb-8">
 							<InputLabel title="Upload file" important />
-							<FileInput multiple />
+							<FileInput multiple={false} onFilesChange={setFiles} />
 						</div>
 
 						<div className="flex items-center justify-between gap-4">
@@ -95,13 +142,15 @@ export default function CreateNFTRetro() {
 						type="number"
 						placeholder="Enter your price"
 						inputClassName="spin-button-hidden"
+						value={fundingGoal}
+						onChange={(e) => setFundingGoal(e.target.value)}
 					/>
 				</div>
 
 				{/* Name */}
 				<div className="mb-8">
 					<InputLabel title="Name" important />
-					<Input type="text" placeholder="Item name" />
+					<Input type="text" placeholder="Item name" value={title} onChange={(e) => setTitle(e.target.value)} />
 				</div>
 
 				{/* External link */}
@@ -119,7 +168,7 @@ export default function CreateNFTRetro() {
 						title="Description"
 						subTitle="The description will be included on the item's detail page underneath its image."
 					/>
-					<Textarea placeholder="Provide a detailed description of your item" />
+					<Textarea placeholder="Provide a detailed description of your item" value={description} onChange={(e) => setDescription(e.target.value)} />
 				</div>
 
 				{/* Unlockable content */}
@@ -179,11 +228,10 @@ export default function CreateNFTRetro() {
 										<Listbox.Option key={option.id} value={option}>
 											{({ selected }) => (
 												<div
-													className={`flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-900 transition dark:text-gray-100  ${
-														selected
+													className={`flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-900 transition dark:text-gray-100  ${selected
 															? "bg-gray-200/70 font-medium dark:bg-gray-600/60"
 															: "hover:bg-gray-100 dark:hover:bg-gray-700/70"
-													}`}
+														}`}
 												>
 													<span className="ltr:mr-2 rtl:ml-2">
 														{option.icon}
@@ -199,7 +247,7 @@ export default function CreateNFTRetro() {
 					</div>
 				</div>
 
-				<Button shape="rounded">CREATE</Button>
+				<Button shape="rounded" onClick={handleSubmit} isLoading={isLoading} disabled={isLoading}>CREATE</Button>
 			</div>
 		</>
 	);

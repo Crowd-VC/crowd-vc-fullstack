@@ -49,3 +49,9 @@ export {
   type ERC20TransferEvent,
   type ERC20ApprovalEvent
 } from './erc20'
+
+// Address exports
+export {
+  DeployedAddresses,
+  CROWD_VC_FACTORY_ADDRESS
+} from './addresses'

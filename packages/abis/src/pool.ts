@@ -3,7 +3,7 @@
  * Auto-generated from compiled Hardhat artifacts
  */
 
-import poolArtifact from '../../../apps/contracts/artifacts/contracts/core/CrowdVCPool.sol/CrowdVCPool.json'
+import poolArtifact from '../../contracts/artifacts/contracts/core/CrowdVCPool.sol/CrowdVCPool.json'
 
 export const CrowdVCPoolABI = poolArtifact.abi
 

@@ -5,10 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import {
   usePoolDetails,
-  useCastVote,
-  useContribute,
   useUserContributions,
 } from '@/hooks/use-investor-pools';
+import { useContribute, useVote } from '@/hooks/use-pool-contract';
+import { parseEther } from 'viem';
 import { useWallet } from '@/hooks/use-wallet';
 import { useAppKit } from '@reown/appkit/react';
 import { Button } from '@/components/ui/shadcn/button';
@@ -63,8 +63,18 @@ function PoolDetailsContent() {
   const userId = 'user_2'; // Placeholder for investor user
 
   const { data, isLoading } = usePoolDetails(poolId, userId);
-  const castVote = useCastVote();
-  const contribute = useContribute();
+
+  const castVote = useVote(poolId as `0x${string}`, () => {
+    queryClient.invalidateQueries({ queryKey: ['pools'] });
+    setConfirmDialogOpen(false);
+    setSelectedStartupId(null);
+  });
+
+  const contribute = useContribute(poolId as `0x${string}`, () => {
+    queryClient.invalidateQueries({ queryKey: ['pools'] });
+    queryClient.invalidateQueries({ queryKey: ['user-contributions'] });
+  });
+
   const { data: userContributions = [] } = useUserContributions(poolId, userId);
 
   const [selectedStartupId, setSelectedStartupId] = useState<string | null>(
@@ -80,28 +90,10 @@ function PoolDetailsContent() {
     if (!wallet.address) return;
 
     try {
-      const platformFee = amount * 0.02;
-      const gasFee = 15;
-
-      await contribute.mutateAsync({
-        poolId,
-        userId,
-        walletAddress: wallet.address,
-        amount: Math.round(amount), // Amount in dollars
-        platformFee: Math.round(platformFee),
-        gasFee: Math.round(gasFee),
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['pools'] });
-      queryClient.invalidateQueries({ queryKey: ['user-contributions'] });
-
-      toast.success('Contribution successful!', {
-        description: `You have contributed $${amount.toLocaleString()} to this pool.`,
-      });
+      contribute.contribute(parseEther(amount.toString()));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to contribute',
-      );
+      console.error(error);
+      toast.error('Failed to initiate contribution');
     }
   };
 
@@ -140,23 +132,10 @@ function PoolDetailsContent() {
     if (!selectedStartupId || !wallet.address) return;
 
     try {
-      await castVote.mutateAsync({
-        poolId,
-        pitchId: selectedStartupId,
-        userId,
-        walletAddress: wallet.address,
-      });
-
-      toast.success('Vote cast successfully!', {
-        description: 'Thank you for participating in this investment pool.',
-      });
-
-      setConfirmDialogOpen(false);
-      setSelectedStartupId(null);
+      castVote.vote(selectedStartupId as `0x${string}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to cast vote',
-      );
+      console.error(error);
+      toast.error('Failed to initiate vote');
     }
   };
 
