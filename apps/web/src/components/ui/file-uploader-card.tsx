@@ -13,11 +13,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface FileUploaderCardProps {
 	accept?: string[];
 	className?: string;
+	onFileChange?: (file: File | null) => void;
 }
 
 export function FileUploaderCard({
 	accept = ["image/png", "image/jpeg", "image/gif", "application/pdf"],
 	className,
+	onFileChange,
 }: FileUploaderCardProps) {
 	const [file, setFile] = useState<string | null>(null);
 	const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
@@ -64,6 +66,10 @@ export function FileUploaderCard({
 			return;
 		}
 
+		if (onFileChange) {
+			onFileChange(uploadedFile);
+		}
+
 		if (uploadedFile.type === "application/pdf") {
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -86,6 +92,9 @@ export function FileUploaderCard({
 		setFileType(null);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = "";
+		}
+		if (onFileChange) {
+			onFileChange(null);
 		}
 	};
 

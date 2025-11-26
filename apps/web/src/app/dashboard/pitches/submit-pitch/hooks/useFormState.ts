@@ -12,6 +12,8 @@ import { usePitchesStore } from '@/lib/stores/pitches';
 import { DEFAULT_VALUES } from '../constants';
 import { toast } from 'sonner';
 import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
+import { useWallet } from '@/hooks/use-wallet';
+import { usePinataUpload } from '@/hooks/use-pinata-upload';
 
 const initialFormData: CompleteFormData = {
   title: DEFAULT_VALUES.TITLE,
@@ -98,11 +100,34 @@ export const useFormState = () => {
     [setValue],
   );
 
+  const { wallet } = useWallet();
+  const { uploadToPinata } = usePinataUpload();
+
   // Form submission
   const handleFormSubmit = useCallback(
     async (data: CompleteFormData) => {
       setIsSubmitting(true);
       try {
+        let fileCid = '';
+        let metadataCid = '';
+
+        // Upload to Pinata if pitch deck exists
+        if (data.pitchDeck) {
+          const metadata = {
+            ...data,
+            walletAddress: wallet.address,
+            pitchDeck: undefined, // Remove file object from metadata
+            pitchVideo: undefined, // Remove file object from metadata
+          };
+
+          const pinataResult = await uploadToPinata(data.pitchDeck, metadata);
+          if (!pinataResult.success) {
+            throw new Error(pinataResult.error || 'Failed to upload to Pinata');
+          }
+          fileCid = pinataResult.fileCid || '';
+          metadataCid = pinataResult.metadataCid || '';
+        }
+
         // Prepare pitch data for API submission
         const pitchPayload = {
           // TODO: Get actual user ID from session/auth
@@ -132,12 +157,11 @@ export const useFormState = () => {
           expectedROI: data.expectedROI,
 
           // Media URLs (in production, files would be uploaded first)
-          pitchDeckUrl: data.pitchDeck
-            ? `/uploads/pitch-deck-${Date.now()}.pdf`
-            : undefined,
+          pitchDeckUrl: fileCid ? `https://gateway.pinata.cloud/ipfs/${fileCid}` : undefined,
           pitchVideoUrl: data.pitchVideo
             ? `/uploads/pitch-video-${Date.now()}.mp4`
             : undefined,
+          metadataCid: metadataCid,
           demoUrl: data.demoUrl,
           prototypeUrl: data.socialUrl,
         };
@@ -213,7 +237,7 @@ export const useFormState = () => {
         setIsSubmitting(false);
       }
     },
-    [addPitch],
+    [addPitch, wallet, uploadToPinata],
   );
 
   // Reset form

@@ -4,9 +4,8 @@ import {
   projectId,
   wagmiAdapter,
   wagmiMetaData,
-  localhost,
 } from '@/app/shared/wagmi-config';
-import { sepolia } from '@reown/appkit/networks';
+import { sepolia, base } from '@reown/appkit/networks';
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiProvider, cookieToInitialState } from 'wagmi';
 import { ReownAuthentication } from '@reown/appkit-siwx';
@@ -22,7 +21,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 createAppKit({
   adapters: [wagmiAdapter],
-  networks: [sepolia],
+  networks: [isDevelopment ? sepolia : base],
   metadata: wagmiMetaData,
   projectId,
   features: {

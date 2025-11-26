@@ -39,6 +39,19 @@ interface ICrowdVCFactory {
         uint256 approvedAt;
     }
 
+    struct PoolParams {
+        string poolId;
+        string name;
+        string category;
+        uint256 fundingGoal;
+        uint256 votingDuration;
+        uint256 fundingDuration;
+        bytes32[] candidatePitches;
+        address acceptedToken;
+        uint256 minContribution;
+        uint256 maxContribution;
+    }
+
     // Events
     event UserRegistered(address indexed user, UserType userType, uint256 timestamp);
     event UserTypeUpdated(address indexed user, UserType oldType, UserType newType);
@@ -62,16 +75,5 @@ interface ICrowdVCFactory {
     function registerUser(UserType userType, string calldata metadataURI) external;
     function submitPitch(string calldata title, string calldata ipfsHash, uint256 fundingGoal) external returns (bytes32);
     function updatePitchStatus(bytes32 pitchId, PitchStatus newStatus) external;
-    function createPool(
-        string calldata poolId,
-        string calldata name,
-        string calldata category,
-        uint256 fundingGoal,
-        uint256 votingDuration,
-        uint256 fundingDuration,
-        bytes32[] calldata candidatePitches,
-        address acceptedToken,
-        uint256 minContribution,
-        uint256 maxContribution
-    ) external returns (address);
+    function createPool(PoolParams calldata params) external returns (address);
 }

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/ICrowdVCPool.sol";
 import "../interfaces/ICrowdVCFactory.sol";
 import "../libraries/FeeCalculator.sol";
@@ -17,7 +16,7 @@ import "../libraries/ValidationLib.sol";
  * @dev Individual pool contract handling contributions, voting, and distributions
  * @notice Issues NFT receipts for contributions, implements weighted voting
  */
-contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pausable {
+contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FeeCalculator for uint256;
 
@@ -109,46 +108,36 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
      */
     function initialize(
         address _factory,
-        string calldata _name,
-        string calldata _category,
-        uint256 _fundingGoal,
-        uint256 _votingDuration,
-        uint256 _fundingDuration,
-        bytes32[] calldata _candidatePitches,
-        address _acceptedToken, // For backward compatibility, single token
-        uint256 _minContribution,
-        uint256 _maxContribution,
-        uint256 _platformFeePercent,
-        address _treasury
+        ICrowdVCPool.PoolConfig calldata _config
     ) external {
         require(!_initialized, "Already initialized");
         require(msg.sender == factory, "Only factory");
-        require(_maxContribution == 0 || _maxContribution >= _minContribution, "Invalid max contribution");
-        require(_fundingGoal > 0, "Invalid funding goal");
-        require(_votingDuration > 0 && _fundingDuration > 0, "Invalid durations");
-        require(_candidatePitches.length > 0, "No candidate pitches");
-        require(_acceptedToken != address(0), "Invalid token");
-        require(_treasury != address(0), "Invalid treasury");
-        require(_platformFeePercent <= 1000, "Fee too high"); // Max 10%
+        require(_config.maxContribution == 0 || _config.maxContribution >= _config.minContribution, "Invalid max contribution");
+        require(_config.fundingGoal > 0, "Invalid funding goal");
+        require(_config.votingDuration > 0 && _config.fundingDuration > 0, "Invalid durations");
+        require(_config.candidatePitches.length > 0, "No candidate pitches");
+        require(_config.acceptedToken != address(0), "Invalid token");
+        require(_config.treasury != address(0), "Invalid treasury");
+        require(_config.platformFeePercent <= 1000, "Fee too high"); // Max 10%
 
-        poolName = _name;
-        category = _category;
-        fundingGoal = _fundingGoal;
-        votingDeadline = block.timestamp + _votingDuration;
-        fundingDeadline = block.timestamp + _fundingDuration;
+        poolName = _config.name;
+        category = _config.category;
+        fundingGoal = _config.fundingGoal;
+        votingDeadline = block.timestamp + _config.votingDuration;
+        fundingDeadline = block.timestamp + _config.fundingDuration;
         
         // Set up accepted tokens (support single token for now, can add more later)
-        acceptedTokens.push(_acceptedToken);
-        isAcceptedToken[_acceptedToken] = true;
+        acceptedTokens.push(_config.acceptedToken);
+        isAcceptedToken[_config.acceptedToken] = true;
         
-        minContribution = _minContribution;
-        maxContribution = _maxContribution;
-        platformFeePercent = _platformFeePercent;
-        treasury = _treasury;
+        minContribution = _config.minContribution;
+        maxContribution = _config.maxContribution;
+        platformFeePercent = _config.platformFeePercent;
+        treasury = _config.treasury;
 
-        candidatePitches = _candidatePitches;
-        for (uint256 i = 0; i < _candidatePitches.length; i++) {
-            isCandidatePitch[_candidatePitches[i]] = true;
+        candidatePitches = _config.candidatePitches;
+        for (uint256 i = 0; i < _config.candidatePitches.length; i++) {
+            isCandidatePitch[_config.candidatePitches[i]] = true;
         }
 
         status = PoolStatus.Active;
@@ -171,7 +160,6 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
         external
         override
         nonReentrant
-        whenNotPaused
         returns (uint256 tokenId)
     {
         require(status == PoolStatus.Active, "Pool not active");
@@ -532,19 +520,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard, Pa
         emit PoolActivated(block.timestamp);
     }
 
-    /**
-     * @dev Pause pool (emergency only)
-     */
-    function pausePool() external onlyRole(ADMIN_ROLE) {
-        _pause();
-    }
 
-    /**
-     * @dev Unpause pool
-     */
-    function unpausePool() external onlyRole(ADMIN_ROLE) {
-        _unpause();
-    }
 
     /**
      * @dev Emergency withdraw all funds (critical bug only)

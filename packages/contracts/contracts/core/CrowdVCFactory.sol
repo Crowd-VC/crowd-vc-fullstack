@@ -271,55 +271,44 @@ contract CrowdVCFactory is
 
     /**
      * @dev Create a new investment pool (admin only)
-     * @param poolId Off-chain database ID for the pool (as bytes32 for gas efficiency)
-     * @param name Pool name
-     * @param category Pool category
-     * @param fundingGoal Total funding goal for the pool
-     * @param votingDuration Duration of voting period in seconds
-     * @param fundingDuration Duration of funding period in seconds
-     * @param candidatePitches Array of approved pitch IDs
-     * @param acceptedToken Token address (USDT or USDC)
-     * @param minContribution Minimum contribution amount
-     * @param maxContribution Maximum contribution amount (0 = no limit)
+     * @param params Pool configuration parameters
      * @return poolAddress Address of the newly created pool
      */
-    function createPool(
-        bytes32 poolId,
-        string calldata name,
-        string calldata category,
-        uint256 fundingGoal,
-        uint256 votingDuration,
-        uint256 fundingDuration,
-        bytes32[] calldata candidatePitches,
-        address acceptedToken,
-        uint256 minContribution,
-        uint256 maxContribution
-    ) external onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant returns (address) {
+    function createPool(ICrowdVCFactory.PoolParams calldata params)
+        external
+        override
+        onlyRole(ADMIN_ROLE)
+        whenNotPaused
+        nonReentrant
+        returns (address)
+    {
+        bytes32 poolId = keccak256(bytes(params.poolId));
+        
         // Validate pool ID
         if (poolId == bytes32(0)) revert ValidationLib.InvalidString();
         if (poolIdToAddress[poolId] != address(0)) revert PoolIdAlreadyExists();
 
         // Validate parameters
         ValidationLib.validatePoolParameters(
-            name,
-            fundingGoal,
-            votingDuration,
-            fundingDuration,
-            minContribution,
+            params.name,
+            params.fundingGoal,
+            params.votingDuration,
+            params.fundingDuration,
+            params.minContribution,
             MIN_POOL_GOAL,
             MAX_POOL_GOAL,
             MIN_VOTING_DURATION,
             MAX_VOTING_DURATION
         );
-        ValidationLib.validateNonEmptyArray(candidatePitches);
+        ValidationLib.validateNonEmptyArray(params.candidatePitches);
 
-        if (!supportedTokens[acceptedToken]) revert TokenNotSupported();
-        if (maxContribution != 0 && maxContribution < minContribution) revert InvalidMaxContribution();
+        if (!supportedTokens[params.acceptedToken]) revert TokenNotSupported();
+        if (params.maxContribution != 0 && params.maxContribution < params.minContribution) revert InvalidMaxContribution();
 
         // Verify all pitches are approved (optimized loop)
-        uint256 pitchCount = candidatePitches.length;
+        uint256 pitchCount = params.candidatePitches.length;
         for (uint256 i = 0; i < pitchCount;) {
-            bytes32 pitchId = candidatePitches[i];
+            bytes32 pitchId = params.candidatePitches[i];
             PitchData storage pitch = _pitches[pitchId];
 
             if (pitch.status != PitchStatus.Approved) revert PitchNotApproved();
@@ -332,20 +321,21 @@ contract CrowdVCFactory is
         address poolAddress = Clones.clone(poolImplementation);
         CrowdVCPool pool = CrowdVCPool(poolAddress);
 
-        pool.initialize(
-            address(this),
-            name,
-            category,
-            fundingGoal,
-            votingDuration,
-            fundingDuration,
-            candidatePitches,
-            acceptedToken,
-            minContribution,
-            maxContribution,
-            platformFeePercent,
-            treasury
-        );
+        ICrowdVCPool.PoolConfig memory config = ICrowdVCPool.PoolConfig({
+            name: params.name,
+            category: params.category,
+            fundingGoal: params.fundingGoal,
+            votingDuration: params.votingDuration,
+            fundingDuration: params.fundingDuration,
+            candidatePitches: params.candidatePitches,
+            acceptedToken: params.acceptedToken,
+            minContribution: params.minContribution,
+            maxContribution: params.maxContribution,
+            platformFeePercent: platformFeePercent,
+            treasury: treasury
+        });
+
+        pool.initialize(address(this), config);
 
         _isPools[poolAddress] = true;
         _allPools.push(poolAddress);
@@ -354,41 +344,11 @@ contract CrowdVCFactory is
 
         uint256 votingDeadline;
         unchecked {
-            votingDeadline = block.timestamp + votingDuration;
+            votingDeadline = block.timestamp + params.votingDuration;
         }
 
-        emit PoolDeployed(string(abi.encodePacked(poolId)), poolAddress, votingDeadline, block.timestamp);
+        emit PoolDeployed(params.poolId, poolAddress, votingDeadline, block.timestamp);
         return poolAddress;
-    }
-
-    /**
-     * @dev Create pool with string poolId (backward compatibility)
-     */
-    function createPool(
-        string calldata poolId,
-        string calldata name,
-        string calldata category,
-        uint256 fundingGoal,
-        uint256 votingDuration,
-        uint256 fundingDuration,
-        bytes32[] calldata candidatePitches,
-        address acceptedToken,
-        uint256 minContribution,
-        uint256 maxContribution
-    ) external override onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant returns (address) {
-        bytes32 poolIdBytes = keccak256(bytes(poolId));
-        return this.createPool(
-            poolIdBytes,
-            name,
-            category,
-            fundingGoal,
-            votingDuration,
-            fundingDuration,
-            candidatePitches,
-            acceptedToken,
-            minContribution,
-            maxContribution
-        );
     }
 
     /**
@@ -442,23 +402,7 @@ contract CrowdVCFactory is
         CrowdVCPool(poolAddress).activatePool();
     }
 
-    /**
-     * @dev Pause a specific pool (emergency only)
-     * @param poolAddress Address of the pool to pause
-     */
-    function pausePool(address poolAddress) external onlyRole(ADMIN_ROLE) {
-        if (!_isPools[poolAddress]) revert InvalidPool();
-        CrowdVCPool(poolAddress).pausePool();
-    }
 
-    /**
-     * @dev Unpause a specific pool
-     * @param poolAddress Address of the pool to unpause
-     */
-    function unpausePool(address poolAddress) external onlyRole(ADMIN_ROLE) {
-        if (!_isPools[poolAddress]) revert InvalidPool();
-        CrowdVCPool(poolAddress).unpausePool();
-    }
 
     /**
      * @dev Emergency withdraw all funds from pool (critical bug only)

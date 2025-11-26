@@ -35,6 +35,20 @@ interface ICrowdVCPool {
         uint256 maxContribution;
     }
 
+    struct PoolConfig {
+        string name;
+        string category;
+        uint256 fundingGoal;
+        uint256 votingDuration;
+        uint256 fundingDuration;
+        bytes32[] candidatePitches;
+        address acceptedToken;
+        uint256 minContribution;
+        uint256 maxContribution;
+        uint256 platformFeePercent;
+        address treasury;
+    }
+
     struct VoteResult {
         bytes32 pitchId;
         address wallet;

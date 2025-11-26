@@ -46,7 +46,7 @@ export const wagmiMetaData = {
  * Production: only BASE networks
  */
 const isDevelopment = process.env.NODE_ENV === 'development';
-const networks = [sepolia]
+const networks = [isDevelopment ? sepolia : base]
 
 export const wagmiAdapter = new WagmiAdapter({
   networks,

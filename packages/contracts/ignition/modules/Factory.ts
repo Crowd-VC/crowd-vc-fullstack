@@ -37,12 +37,17 @@ export default buildModule('FactoryModule', (m) => {
   // Step 1: Deploy ProxyAdmin
   // This contract will be the admin of the TransparentUpgradeableProxy
   // Only the ProxyAdmin owner can upgrade the proxy
-  const proxyAdmin = m.contract('ProxyAdmin', [], {
+  const proxyAdmin = m.contract('ProxyAdmin', [deployer], {
     id: 'ProxyAdmin',
   });
 
+  // Step 1.5: Deploy Pool Implementation
+  const poolImplementation = m.contract('CrowdVCPool', [], {
+    id: 'CrowdVCPool_Implementation',
+  });
+
   // Step 2: Deploy the implementation contract
-  const factoryImplementation = m.contract('CrowdVCFactory', [], {
+  const factoryImplementation = m.contract('CrowdVCFactory', [poolImplementation], {
     id: 'CrowdVCFactory_Implementation',
   });
 

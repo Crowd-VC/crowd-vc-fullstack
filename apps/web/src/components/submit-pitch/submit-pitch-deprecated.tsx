@@ -16,6 +16,9 @@ import { Flow } from '@/components/icons/flow';
 import { Warning } from '@/components/icons/warning';
 import { Unlocked } from '@/components/icons/unlocked';
 import { FileUploaderCard } from '../ui/file-uploader-card';
+import { usePinataUpload } from '@/hooks/use-pinata-upload';
+import { useWallet } from '@/hooks/use-wallet';
+import { toast } from 'sonner';
 
 const BlockchainOptions = [
   {
@@ -38,6 +41,57 @@ export default function SubmitPitch() {
   const [unlocked, setUnlocked] = useState(false);
   const [priceType, setPriceType] = useState('fixed');
   const [blockchain, setBlockChain] = useState(BlockchainOptions[0]);
+
+  // Form State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [externalLink, setExternalLink] = useState('');
+  const [unlockedContent, setUnlockedContent] = useState('');
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [pitchDeck, setPitchDeck] = useState<File | null>(null);
+
+  const { wallet } = useWallet();
+  const { uploadToPinata, isUploading } = usePinataUpload();
+
+  const handleCreate = async () => {
+    if (!wallet.isConnected) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!pitchDeck) {
+      toast.error('Please upload a pitch deck');
+      return;
+    }
+
+    if (!title || !description) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const metadata = {
+      title,
+      description,
+      externalLink,
+      unlockedContent: unlocked ? unlockedContent : null,
+      explicit,
+      blockchain: blockchain.value,
+      walletAddress: wallet.address,
+      createdAt: new Date().toISOString(),
+    };
+
+    const result = await uploadToPinata(pitchDeck, metadata);
+
+    if (result.success) {
+      toast.success('Pitch submitted successfully!');
+      console.log('File CID:', result.fileCid);
+      console.log('Metadata CID:', result.metadataCid);
+      // Reset form or redirect
+    } else {
+      toast.error(result.error || 'Failed to submit pitch');
+    }
+  };
+
   return (
     <>
       <div className="mx-auto grid w-full grid-cols-3 gap-6 sm:pt-0 lg:px-8 xl:px-10 2xl:px-0">
@@ -54,7 +108,10 @@ export default function SubmitPitch() {
         <div className="col-span-2 mb-8">
           <InputLabel title="Upload Cover Image" important />
 
-          <FileUploaderCard accept={['image/png', 'image/jpeg', 'image/gif']} />
+          <FileUploaderCard
+            accept={['image/png', 'image/jpeg', 'image/gif']}
+            onFileChange={setCoverImage}
+          />
 
           {/* <div className="flex items-center justify-between gap-4">
 							<InputLabel
@@ -111,14 +168,15 @@ export default function SubmitPitch() {
               <FileUploaderCard
                 className="aspect-square"
                 accept={['application/pdf']}
+                onFileChange={setPitchDeck}
               />
             </div>
             <div className="p-5">
               <div className="text-sm font-medium text-black dark:text-white">
-                Pulses Of Imagination #214
+                {title || 'Project Title'}
               </div>
               <div className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-                0.40 ETH
+                {/* 0.40 ETH */}
               </div>
             </div>
           </div>
@@ -130,8 +188,10 @@ export default function SubmitPitch() {
           <Input
             min={0}
             type="text"
-            placeholder="Enter your price"
+            placeholder="Enter your project title"
             inputClassName="spin-button-hidden"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </div>
 
@@ -142,7 +202,11 @@ export default function SubmitPitch() {
             important
             subTitle="The description will be included on the project's detail page underneath its image."
           />
-          <Textarea placeholder="Provide a detailed description of your project" />
+          <Textarea
+            placeholder="Provide a detailed description of your project"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </div>
 
         {/* External link */}
@@ -151,7 +215,12 @@ export default function SubmitPitch() {
             title="External link"
             subTitle="We will include a link to this URL on this item's detail page, so that users can click to learn more about it."
           />
-          <Input type="text" placeholder="https://yoursite.io/item/123" />
+          <Input
+            type="text"
+            placeholder="https://yoursite.io/item/123"
+            value={externalLink}
+            onChange={(e) => setExternalLink(e.target.value)}
+          />
         </div>
 
         {/* Unlockable content */}
@@ -164,7 +233,11 @@ export default function SubmitPitch() {
             onChange={() => setUnlocked(!unlocked)}
           >
             {unlocked && (
-              <Textarea placeholder="Enter content (access key, code to redeem, link to a file, etc.)" />
+              <Textarea
+                placeholder="Enter content (access key, code to redeem, link to a file, etc.)"
+                value={unlockedContent}
+                onChange={(e) => setUnlockedContent(e.target.value)}
+              />
             )}
           </ToggleBar>
         </div>
@@ -211,11 +284,10 @@ export default function SubmitPitch() {
                     <Listbox.Option key={option.id} value={option}>
                       {({ selected }) => (
                         <div
-                          className={`flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-900 transition dark:text-gray-100 ${
-                            selected
+                          className={`flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-900 transition dark:text-gray-100 ${selected
                               ? 'bg-gray-200/70 font-medium dark:bg-gray-600/60'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-700/70'
-                          }`}
+                            }`}
                         >
                           <span className="ltr:mr-2 rtl:ml-2">
                             {option.icon}
@@ -231,7 +303,9 @@ export default function SubmitPitch() {
           </div>
         </div>
 
-        <Button shape="rounded">CREATE</Button>
+        <Button shape="rounded" onClick={handleCreate} isLoading={isUploading}>
+          CREATE
+        </Button>
       </div>
     </>
   );
