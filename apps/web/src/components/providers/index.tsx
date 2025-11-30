@@ -14,17 +14,15 @@ export function RootProvider({ children }: { children: React.ReactNode }) {
   return (
     <WalletProvider>
       <QueryProvider>
-        <ThemeProvider>
-          <JotaiProvider>
-            <SettingsButton />
-            <SettingsDrawer />
-            {children}
-            <Suspense fallback={null}>
-              <ModalsContainer />
-              <DrawersContainer />
-            </Suspense>
-          </JotaiProvider>
-        </ThemeProvider>
+        <JotaiProvider>
+          <SettingsButton />
+          <SettingsDrawer />
+          {children}
+          <Suspense fallback={null}>
+            <ModalsContainer />
+            <DrawersContainer />
+          </Suspense>
+        </JotaiProvider>
       </QueryProvider>
     </WalletProvider>
   );

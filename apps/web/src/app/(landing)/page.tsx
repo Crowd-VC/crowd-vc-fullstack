@@ -27,8 +27,7 @@ export default function LandingPage() {
       {
         !showPortal && (
           <div
-            className={`font-inter transition-opacity duration-600 ${showPortal ? 'opacity-0' : 'opacity-100 animate-fade-in-landing'
-              }`}
+            className={`font-inter transition-opacity duration-600 animate-fade-in-landing`}
           >
             <Navigation />
             <HeroSection />

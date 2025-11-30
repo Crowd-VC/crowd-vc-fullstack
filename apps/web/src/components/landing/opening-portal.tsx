@@ -162,7 +162,7 @@ export function OpeningPortal({ onComplete }: OpeningPortalProps) {
 
           {/* Welcome Content */}
           <div className="relative z-10 max-w-[800px] px-8 text-center">
-            <h1 className="mb-4 text-6xl font-extrabold animate-[slideInDown_0.8s_ease-out]">
+            <h1 className="text-slate-400 mb-4 text-6xl font-extrabold animate-[slideInDown_0.8s_ease-out]">
               Welcome to{' '}
               <span className="bg-gradient-to-r from-slate-300 to-slate-400 bg-clip-text text-transparent">
                 Crowd

@@ -6,15 +6,7 @@ import { footerLinks, socialLinks } from '@/data/landing-data';
 export function Footer() {
   return (
     <footer className="relative border-t border-border py-20">
-      <DottedGlowBackground
-        className="absolute inset-0"
-        gap={10}
-        radius={2}
-        opacity={0.9}
-        backgroundOpacity={0}
-        speedMin={0.3}
-        speedMax={0.8}
-      />
+      <div />
       <div className="container relative z-10 mx-auto px-6 lg:px-10">
         <div className="mb-16 grid grid-cols-1 gap-16 md:grid-cols-2 lg:grid-cols-4 lg:gap-20">
           <div className="lg:col-span-1">
