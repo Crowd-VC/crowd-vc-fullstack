@@ -39,11 +39,13 @@ export function CTASection() {
           </p>
 
           <div className="mb-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href={routes.signIn}>
+            <Link href={routes.home}>
               <AccessPlatformButton>Get Started Now →</AccessPlatformButton>
             </Link>
-            <Button type="button" variant="outline" size="lg">
-              Schedule a Demo
+            <Button type="button" variant="outline" size="lg" asChild>
+              <Link href={routes.home}>
+                Schedule a Demo
+              </Link>
             </Button>
           </div>
 

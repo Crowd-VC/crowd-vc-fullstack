@@ -17,8 +17,8 @@ export {
   type UserRegisteredEvent,
   type PitchSubmittedEvent,
   type PitchStatusUpdatedEvent,
-  type PoolCreatedEvent
-} from './factory'
+  type PoolCreatedEvent,
+} from './factory';
 
 // Pool exports
 export {
@@ -39,19 +39,24 @@ export {
   type MilestoneCompletedEvent,
   type FundsDistributedEvent,
   type RefundedEvent,
-  type PoolClosedEvent
-} from './pool'
+  type PoolClosedEvent,
+} from './pool';
 
 // ERC20 exports
 export {
   ERC20ABI,
   type ERC20TokenInfo,
   type ERC20TransferEvent,
-  type ERC20ApprovalEvent
-} from './erc20'
+  type ERC20ApprovalEvent,
+} from './erc20';
 
 // Address exports
 export {
   DeployedAddresses,
-  CROWD_VC_FACTORY_ADDRESS
-} from './addresses'
+  CROWD_VC_FACTORY_ADDRESS,
+  getAddressesForChain,
+  getFactoryAddress,
+  isDeployedOnChain,
+  getDeployedChainIds,
+  type ChainAddresses,
+} from './addresses';

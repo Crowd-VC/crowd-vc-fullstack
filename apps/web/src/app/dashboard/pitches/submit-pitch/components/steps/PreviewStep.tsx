@@ -17,6 +17,7 @@ import {
   Clock,
   Percent,
   Edit3,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -219,6 +220,18 @@ export function PreviewStep({ form, onEditStep }: PreviewStepProps) {
                     {(formData.pitchVideo.size / 1024 / 1024).toFixed(1)} MB
                   </Badge>
                 </div>
+              ) : formData.pitchVideoLink ? (
+                <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-3">
+                  <ExternalLink className="h-4 w-4 text-blue-500" />
+                  <a
+                    href={formData.pitchVideoLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm hover:underline truncate"
+                  >
+                    {formData.pitchVideoLink}
+                  </a>
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   No pitch video uploaded
@@ -372,7 +385,7 @@ export function PreviewStep({ form, onEditStep }: PreviewStepProps) {
               </span>
               <span>•</span>
               <span>
-                🎥 {formData.pitchVideo ? 'Video included' : 'No video'}
+                🎥 {formData.pitchVideo || formData.pitchVideoLink ? 'Video included' : 'No video'}
               </span>
               <span>•</span>
               <span>💰 {formatCurrency(formData.fundingGoal)} target</span>

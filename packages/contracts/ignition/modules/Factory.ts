@@ -1,23 +1,23 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules';
 
 /**
- * CrowdVC Factory Deployment using TransparentUpgradeableProxy Pattern
+ * CrowdVC Factory Deployment Module (Non-Upgradeable)
  *
  * This is the main deployment module for the CrowdVC platform.
- * It deploys the Factory contract with upgradeable proxy pattern.
+ * It deploys the Factory contract directly without proxy pattern.
  *
  * Deployed Contracts:
- * 1. ProxyAdmin - Admin contract for managing proxy upgrades
- * 2. CrowdVCFactory (Implementation) - The logic contract
- * 3. TransparentUpgradeableProxy - Proxy pointing to implementation
+ * 1. CrowdVCPool (Implementation) - Pool template for minimal proxy cloning
+ * 2. CrowdVCFactory - The main factory contract
  *
  * Network-Specific Parameters:
  * - BASE Mainnet: Use real USDT/USDC addresses
  * - BASE Sepolia: Deploy mock tokens first (see MockTokens module)
+ * - Sepolia: Use test token addresses
  * - Local Hardhat: Deploy mock tokens first (see MockTokens module)
  *
  * Usage:
- * npx hardhat ignition deploy ignition/modules/Factory.ts --network baseSepolia --parameters ignition/parameters/baseSepolia.json
+ * npx hardhat ignition deploy ignition/modules/Factory.ts --network sepolia --parameters ignition/parameters/sepolia.json
  */
 export default buildModule('FactoryModule', (m) => {
   // Get deployment parameters
@@ -34,51 +34,24 @@ export default buildModule('FactoryModule', (m) => {
   const usdt = m.getParameter('usdt', USDT_BASE_MAINNET);
   const usdc = m.getParameter('usdc', USDC_BASE_MAINNET);
 
-  // Step 1: Deploy ProxyAdmin
-  // This contract will be the admin of the TransparentUpgradeableProxy
-  // Only the ProxyAdmin owner can upgrade the proxy
-  const proxyAdmin = m.contract('ProxyAdmin', [deployer], {
-    id: 'ProxyAdmin',
-  });
-
-  // Step 1.5: Deploy Pool Implementation
+  // Step 1: Deploy Pool Implementation
+  // This is used as the template for minimal proxy cloning (ERC-1167)
   const poolImplementation = m.contract('CrowdVCPool', [], {
     id: 'CrowdVCPool_Implementation',
   });
 
-  // Step 2: Deploy the implementation contract
-  const factoryImplementation = m.contract('CrowdVCFactory', [poolImplementation], {
-    id: 'CrowdVCFactory_Implementation',
-  });
-
-  // Step 3: Encode the initialize function call
-  // This will be called atomically when deploying the proxy
-  const initializeData = m.encodeFunctionCall(
-    factoryImplementation,
-    'initialize',
-    [treasury, platformFee, usdt, usdc],
-  );
-
-  // Step 4: Deploy TransparentUpgradeableProxy
-  // The proxy delegates all calls to the implementation contract
-  const proxy = m.contract(
-    'TransparentUpgradeableProxy',
-    [factoryImplementation, proxyAdmin, initializeData],
+  // Step 2: Deploy the CrowdVCFactory directly
+  // Constructor args: (poolImplementation, treasury, platformFee, usdt, usdc)
+  const factory = m.contract(
+    'CrowdVCFactory',
+    [poolImplementation, treasury, platformFee, usdt, usdc],
     {
-      id: 'CrowdVCFactory_Proxy',
+      id: 'CrowdVCFactory',
     },
   );
 
-  // Step 5: Get the proxied factory interface
-  // This allows us to interact with the proxy as if it were the factory
-  const factory = m.contractAt('CrowdVCFactory', proxy, {
-    id: 'CrowdVCFactory',
-  });
-
   return {
-    proxyAdmin,
-    factoryImplementation,
-    proxy,
-    factory, // This is the main contract address you'll use in your frontend
+    poolImplementation,
+    factory,
   };
 });

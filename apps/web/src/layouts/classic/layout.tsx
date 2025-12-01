@@ -1,3 +1,5 @@
+'use client';
+
 import cn from "@/utils/cn";
 import { ClassicHeader } from "@/layouts/header/header";
 import Sidebar from "@/layouts/sidebar/_expandable";

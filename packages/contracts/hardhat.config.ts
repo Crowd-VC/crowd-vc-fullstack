@@ -14,10 +14,6 @@ export default defineConfig({
       },
       viaIR: true, // Enable for complex contracts to avoid stack too deep
     },
-    npmFilesToBuild: [
-      '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
-      '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol',
-    ],
   },
   networks: {
     hardhat: {

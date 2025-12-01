@@ -64,11 +64,13 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="mb-16 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href={routes.signIn}>
+            <Link href={routes.pitches}>
               <AccessPlatformButton>Browse Startups →</AccessPlatformButton>
             </Link>
-            <Button type="button" variant="outline" size="lg">
-              Submit Your Pitch
+            <Button type="button" variant="outline" size="lg" asChild>
+              <Link href={routes.submitPitch}>
+                Submit Your Pitch
+              </Link>
             </Button>
           </div>
 

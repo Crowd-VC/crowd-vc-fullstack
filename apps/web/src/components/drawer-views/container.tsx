@@ -15,9 +15,6 @@ import { Close } from "../icons/close";
 const Sidebar = dynamic(() => import("@/layouts/sidebar/_default"));
 const DrawerFilters = dynamic(() => import("@/components/search/filters"));
 const DrawerMenu = dynamic(() => import("@/layouts/sidebar/_layout-menu"));
-const PreviewContent = dynamic(
-	() => import("@/components/submit-pitch/nft-preview-content"),
-);
 
 function renderDrawerContent(view: DRAWER_VIEW | string) {
 	switch (view) {
@@ -39,8 +36,6 @@ function renderDrawerContent(view: DRAWER_VIEW | string) {
 			);
 		case "DRAWER_SEARCH":
 			return <DrawerFilters />;
-		case "DRAWER_PREVIEW_NFT":
-			return <PreviewContent />;
 		default:
 			return <DrawerMenu />;
 	}

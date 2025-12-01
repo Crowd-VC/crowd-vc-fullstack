@@ -106,7 +106,7 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
 
   return (
     <div className="w-[320px] flex-shrink-0">
-      <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+      <Link href={routes.pitchDetails(pitch.id)}>
         <Card
           className="cursor-pointer overflow-visible pt-0"
           style={{

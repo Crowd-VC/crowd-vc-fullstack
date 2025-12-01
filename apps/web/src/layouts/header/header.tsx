@@ -14,7 +14,7 @@ import { useDrawer } from '@/components/drawer-views/context';
 import routes from '@/config/routes';
 import { useLayout } from '@/lib/hooks/use-layout';
 import { LAYOUT_OPTIONS } from '@/lib/constants';
-import WalletConnect from '@/components/nft/wallet-connect';
+import WalletConnect from '@/components/wallet-connect';
 import { useAccount } from 'wagmi';
 
 function NotificationButton() {
@@ -25,7 +25,7 @@ function NotificationButton() {
       <ActiveLink
         href={
           (layout === LAYOUT_OPTIONS.MODERN ? '' : `/${layout}`) +
-          routes.notification
+          routes.notifications
         }
       >
         <div className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-100 bg-accent text-brand shadow-main transition-all hover:-translate-y-0.5 hover:shadow-large focus:-translate-y-0.5 focus:shadow-large focus:outline-none dark:border-gray-700 dark:bg-light-dark dark:text-white sm:h-12 sm:w-12">

@@ -26,7 +26,8 @@
     "hardhat:test": "cd packages/contracts && npx hardhat test",
     "hardhat:node": "cd packages/contracts && npx hardhat node",
     "hardhat:verify": "cd packages/contracts && npx hardhat verify",
-    "hardhat:clean": "cd packages/contracts && npx hardhat clean"
+    "hardhat:clean": "cd packages/contracts && npx hardhat clean",
+    "generate:addresses": "cd apps/web && pnpm exec tsx ../../packages/contracts/scripts/generateAddresses.ts"
   },
   "devDependencies": {
     "husky": "^9.1.7",

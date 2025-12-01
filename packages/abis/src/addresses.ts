@@ -1,16 +1,68 @@
 /**
  * Deployed Contract Addresses
- * Auto-generated from Ignition deployments
+ * Auto-generated from Ignition deployments - DO NOT EDIT MANUALLY
+ * 
+ * Generated at: 2025-12-01T22:41:37.881Z
+ * Run 'pnpm generate:addresses' in packages/contracts to regenerate
  */
 
-export const DeployedAddresses = {
-  FactoryModule: {
-    CrowdVCPool_Implementation: "0x17D123c320c37B1Ac8637B78484A6781D0Bba396",
-    ProxyAdmin: "0xbdaa104b63A931Ffb03ca54C6c7b7e031eF06c91",
-    CrowdVCFactory_Implementation: "0xc243Ce04e7200396D401f632f785E297b99f8421",
-    CrowdVCFactory_Proxy: "0x7B879e76Af4106ce9595873C3fB113d9270d5A3B",
-    CrowdVCFactory: "0x7B879e76Af4106ce9595873C3fB113d9270d5A3B"
-  }
-} as const
+/**
+ * Chain addresses type
+ */
+export interface ChainAddresses {
+  CrowdVCFactory: `0x${string}`;
+  CrowdVCPool_Implementation: `0x${string}`;
+}
 
-export const CROWD_VC_FACTORY_ADDRESS = DeployedAddresses.FactoryModule.CrowdVCFactory
+/**
+ * All deployed addresses organized by chain ID
+ */
+export const DeployedAddresses: Record<number, ChainAddresses> = {
+  "11155111": {
+    "CrowdVCFactory": "0x96B1648de980Df752A3767c7eBd34fe788AB147F",
+    "CrowdVCPool_Implementation": "0xDB2fC434B70893ABEdc2B036337BEa24a5b7605F"
+  }
+} as const;
+
+/**
+ * Get addresses for a specific chain
+ * @param chainId - The chain ID to get addresses for
+ * @returns Chain addresses or undefined if not deployed
+ */
+export function getAddressesForChain(chainId: number): ChainAddresses | undefined {
+  return DeployedAddresses[chainId];
+}
+
+/**
+ * Get the CrowdVCFactory address for a specific chain
+ * @param chainId - The chain ID
+ * @returns Factory address or throws if not deployed
+ */
+export function getFactoryAddress(chainId: number): `0x${string}` {
+  const addresses = DeployedAddresses[chainId];
+  if (!addresses) {
+    throw new Error(`No deployment found for chain ${chainId}`);
+  }
+  return addresses.CrowdVCFactory as `0x${string}`;
+}
+
+/**
+ * Check if contracts are deployed on a chain
+ * @param chainId - The chain ID to check
+ * @returns true if contracts are deployed
+ */
+export function isDeployedOnChain(chainId: number): boolean {
+  const addresses = DeployedAddresses[chainId];
+  return !!addresses && addresses.CrowdVCFactory !== '0x0000000000000000000000000000000000000000';
+}
+
+/**
+ * Get all chain IDs with deployments
+ * @returns Array of chain IDs
+ */
+export function getDeployedChainIds(): number[] {
+  return Object.keys(DeployedAddresses).map(Number);
+}
+
+// Legacy exports for backwards compatibility
+export const CROWD_VC_FACTORY_ADDRESS = DeployedAddresses[11155111]?.CrowdVCFactory ?? DeployedAddresses[31337]?.CrowdVCFactory ?? '0x0000000000000000000000000000000000000000';

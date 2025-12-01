@@ -33,5 +33,5 @@
     ".next/types/**/*.ts",
     "src/app/trading-bot"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "discard"]
 }

@@ -94,6 +94,35 @@ export function MediaUploadStep({
         )}
       />
 
+      <FormField
+        control={form.control}
+        name="pitchVideoLink"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="flex items-center gap-2">
+              <ExternalLink className="h-5 w-5 text-primary" />
+              Pitch Video Link (Youtube, Vimeo, etc.)
+            </FormLabel>
+            <FormControl>
+              <Input
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="h-12 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
+                {...field}
+              />
+            </FormControl>
+            <FormDescription>
+              Or provide a link to your pitch video instead of uploading
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       <div className="space-y-6 rounded-sm bg-accent/50 p-5">
         <h3 className="text-lg font-semibold text-foreground">
           Additional Media (Optional)

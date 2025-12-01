@@ -13,13 +13,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useEffect } from "react";
 // dynamic imports
 const SearchView = dynamic(() => import("@/components/search/view"));
-const ShareView = dynamic(() => import("@/components/nft/share-view"));
-const SelectWallet = dynamic(() => import("@/components/nft/select-wallet"));
+const ShareView = dynamic(() => import("@/components/share-view"));
+const SelectWallet = dynamic(() => import("@/components/select-wallet"));
 const ProfileInfo = dynamic(
 	() => import("@/components/profile/profile-info-view"),
-);
-const PreviewContent = dynamic(
-	() => import("@/components/submit-pitch/nft-preview-content"),
 );
 const FundTransfer = dynamic(
 	() => import("@/components/trading-bot/modals/fund-transfer"),
@@ -52,8 +49,6 @@ function renderModalContent(view: MODAL_VIEW | string, data?: any) {
 			return <Followers />;
 		case "FOLLOWERS_VIEW":
 			return <Followers />;
-		case "NFT_PREVIEW":
-			return <PreviewContent />;
 		case "FUND_TRANSFER_PREVIEW":
 			return <FundTransfer />;
 		case "PROFIT_TRANSFER_PREVIEW":

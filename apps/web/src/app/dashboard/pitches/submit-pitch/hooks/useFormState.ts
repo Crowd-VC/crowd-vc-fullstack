@@ -11,9 +11,9 @@ import type { FileUploadType } from '../types';
 import { usePitchesStore } from '@/lib/stores/pitches';
 import { DEFAULT_VALUES } from '../constants';
 import { toast } from 'sonner';
-import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
 import { useWallet } from '@/hooks/use-wallet';
 import { usePinataUpload } from '@/hooks/use-pinata-upload';
+import { useSubmitPitch } from '@/lib/web3/hooks/factory/useSubmitPitch';
 
 const initialFormData: CompleteFormData = {
   title: DEFAULT_VALUES.TITLE,
@@ -27,6 +27,7 @@ const initialFormData: CompleteFormData = {
   website: DEFAULT_VALUES.WEBSITE,
   pitchDeck: undefined,
   pitchVideo: undefined,
+  pitchVideoLink: '',
   demoUrl: '',
   socialUrl: '',
   fundingGoal: DEFAULT_VALUES.FUNDING_GOAL,
@@ -46,6 +47,7 @@ export const useFormState = () => {
   const [submissionId, setSubmissionId] = useState<string>('');
   const [dragActive, setDragActive] = useState<string | null>(null);
   const { addPitch } = usePitchesStore();
+  const { submitPitch } = useSubmitPitch();
 
   const form = useForm<CompleteFormData>({
     resolver: zodResolver(completeFormSchema),
@@ -106,32 +108,55 @@ export const useFormState = () => {
   // Form submission
   const handleFormSubmit = useCallback(
     async (data: CompleteFormData) => {
+      // 1. Validate Prerequisites
+      if (!wallet.address) {
+        toast.error('Please connect your wallet to submit a pitch');
+        return;
+      }
+
+      if (!data.pitchDeck) {
+        toast.error('Pitch deck is required');
+        return;
+      }
+
       setIsSubmitting(true);
       try {
-        let fileCid = '';
-        let metadataCid = '';
+        // 2. IPFS Upload (Pinata)
+        // We prepare metadata excluding the actual File objects
+        const metadata = {
+          ...data,
+          walletAddress: wallet.address,
+          pitchDeck: undefined,
+          pitchVideo: undefined,
+          submittedAt: new Date().toISOString(),
+        };
 
-        // Upload to Pinata if pitch deck exists
-        if (data.pitchDeck) {
-          const metadata = {
-            ...data,
-            walletAddress: wallet.address,
-            pitchDeck: undefined, // Remove file object from metadata
-            pitchVideo: undefined, // Remove file object from metadata
-          };
+        const pinataResult = await uploadToPinata(data.pitchDeck, metadata);
 
-          const pinataResult = await uploadToPinata(data.pitchDeck, metadata);
-          if (!pinataResult.success) {
-            throw new Error(pinataResult.error || 'Failed to upload to Pinata');
-          }
-          fileCid = pinataResult.fileCid || '';
-          metadataCid = pinataResult.metadataCid || '';
+        if (!pinataResult.success || !pinataResult.metadataCid) {
+          throw new Error(
+            pinataResult.error || 'Failed to upload pitch data to IPFS',
+          );
         }
 
-        // Prepare pitch data for API submission
+        const { fileCid, metadataCid } = pinataResult;
+
+        // 3. Blockchain Submission
+        // Submit the IPFS CID (metadata hash) to the factory contract
+        const txHash = await submitPitch({
+          title: data.title,
+          ipfsHash: metadataCid,
+          fundingGoal: data.fundingGoal, // Hook handles conversion to BigInt
+        });
+
+        if (!txHash) {
+          throw new Error('Transaction failed: No hash returned');
+        }
+
+        // 4. API Submission (Backend)
         const pitchPayload = {
-          // TODO: Get actual user ID from session/auth
-          userId: 'user_2', // Placeholder for now
+          userId: wallet.address,
+          transactionHash: txHash, // Store the TX hash for verification
 
           // Core details
           title: data.title,
@@ -156,17 +181,18 @@ export const useFormState = () => {
           timeToRaise: data.timeToRaise,
           expectedROI: data.expectedROI,
 
-          // Media URLs (in production, files would be uploaded first)
-          pitchDeckUrl: fileCid ? `https://gateway.pinata.cloud/ipfs/${fileCid}` : undefined,
-          pitchVideoUrl: data.pitchVideo
-            ? `/uploads/pitch-video-${Date.now()}.mp4`
+          // Media & Metadata
+          pitchDeckUrl: fileCid
+            ? `https://gateway.pinata.cloud/ipfs/${fileCid}`
             : undefined,
+          pitchVideoUrl: data.pitchVideo
+            ? `/uploads/pitch-video-${Date.now()}.mp4` // Placeholder for video upload if needed
+            : data.pitchVideoLink || undefined,
           metadataCid: metadataCid,
           demoUrl: data.demoUrl,
           prototypeUrl: data.socialUrl,
         };
 
-        // Submit to API
         const response = await fetch('/api/pitches', {
           method: 'POST',
           headers: {
@@ -177,67 +203,44 @@ export const useFormState = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          toast.error(errorData.message || 'Failed to submit pitch');
-          throw new Error(errorData.message || 'Failed to submit pitch');
+          throw new Error(
+            errorData.message || 'Failed to save pitch to database',
+          );
         }
 
         const result = await response.json();
         const createdPitch = result.data;
 
-        // Store in local state for immediate UI update
+        // 5. Update Local State
         addPitch({
-          id: createdPitch.id,
-          title: createdPitch.title,
-          summary: createdPitch.summary,
-          elevatorPitch: createdPitch.elevatorPitch,
-          status: createdPitch.status,
-          fundingGoal: createdPitch.fundingGoal,
-          dateSubmitted: createdPitch.dateSubmitted || new Date().toISOString(),
-          submissionId: createdPitch.submissionId,
-          reviewTimeline: createdPitch.reviewTimeline,
-          lastUpdated: createdPitch.lastUpdated || new Date().toISOString(),
-
-          // Company details
-          industry: createdPitch.industry,
-          companyStage: createdPitch.companyStage,
-          teamSize: createdPitch.teamSize,
-          location: createdPitch.location,
-          website: createdPitch.website,
-          oneKeyMetric: createdPitch.oneKeyMetric,
-
-          // Funding breakdown
-          customAmount: createdPitch.customAmount,
-          productDevelopment: createdPitch.productDevelopment,
-          marketingSales: createdPitch.marketingSales,
-          teamExpansion: createdPitch.teamExpansion,
-          operations: createdPitch.operations,
-          timeToRaise: createdPitch.timeToRaise,
-          expectedROI: createdPitch.expectedROI,
-
-          // Media files
-          pitchDeckUrl: createdPitch.pitchDeckUrl,
-          pitchVideoUrl: createdPitch.pitchVideoUrl,
-          demoUrl: createdPitch.demoUrl,
-          prototypeUrl: createdPitch.prototypeUrl,
+          ...createdPitch,
+          // Ensure strictly typed fields if API returns loose types
+          status: createdPitch.status || 'pending',
+          fundingGoal: createdPitch.fundingGoal || data.fundingGoal,
         });
 
-        // Set submission ID for success modal
-        setSubmissionId(createdPitch.submissionId);
-
-        // Log successful submission
+        setSubmissionId(createdPitch.submissionId || createdPitch.id);
         console.log('Pitch submitted successfully:', createdPitch);
-
         setShowSuccess(true);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error submitting pitch:', error);
-        // TODO: Show error toast/notification to user
-        toast.error('Failed to submit pitch');
-        throw error; // Re-throw to allow parent components to handle
+
+        // User friendly error mapping
+        let message = 'Failed to submit pitch';
+        if (error.message.includes('User rejected')) {
+          message = 'Transaction rejected by user';
+        } else if (error.message.includes('insufficient funds')) {
+          message = 'Insufficient funds for transaction';
+        } else if (error.message) {
+          message = error.message;
+        }
+
+        toast.error(message);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [addPitch, wallet, uploadToPinata],
+    [addPitch, wallet.address, uploadToPinata, submitPitch],
   );
 
   // Reset form

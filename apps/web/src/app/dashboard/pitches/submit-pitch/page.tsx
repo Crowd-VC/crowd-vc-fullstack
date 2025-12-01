@@ -23,7 +23,6 @@ import { useFormState } from './hooks';
 import { FILE_CONSTRAINTS } from './constants';
 import type { FileUploadType } from './types';
 import { Separator } from '@/components/ui/separator';
-import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
 
 export default function SubmitPitchPage() {
   const {
@@ -45,14 +44,6 @@ export default function SubmitPitchPage() {
     handleFileRemove,
   } = useFormState();
 
-
-  const {
-    invokeTransaction,
-    isPending: isInvokingTransaction,
-    isSuccess: isSuccessInvokingTransaction,
-    error: errorInvokingTransaction,
-  } = useInvokeTransaction();
-
   const handleNext = useCallback(
     async (e?: React.MouseEvent) => {
       e?.preventDefault();
@@ -64,7 +55,6 @@ export default function SubmitPitchPage() {
   const handleFormSubmitClick = useCallback(async () => {
     // Explicitly handle form submission only when submit button is clicked
     const formData = form.getValues();
-    await invokeTransaction();
     await submitFormData(formData);
   }, [submitFormData, form]);
 
@@ -244,17 +234,8 @@ export default function SubmitPitchPage() {
                       >
                         {isSubmitting ? (
                           <>
-                            {isInvokingTransaction ? (
-                              <>
-                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
-                                Executing transaction...
-                              </>
-                            ) : (
-                              <>
-                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
-                                Submitting...
-                              </>
-                            )}
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                            Submitting...
                           </>
                         ) : (
                           <>

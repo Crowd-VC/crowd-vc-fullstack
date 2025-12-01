@@ -137,7 +137,7 @@ export function PitchReviewCard({
             Review
           </Button>
           <Button variant="outline" className="border-neutral-700" asChild>
-            <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+            <Link href={routes.pitchDetails(pitch.id)}>
               Details
             </Link>
           </Button>

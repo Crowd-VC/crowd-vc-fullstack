@@ -120,7 +120,7 @@ function LargeFeaturedCard({ pitch }: { pitch: Pitch }) {
   const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
 
   return (
-    <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+    <Link href={routes.pitchDetails(pitch.id)}>
       <Card
         className="relative cursor-pointer overflow-visible pt-0"
         style={{
@@ -167,7 +167,7 @@ function LargeFeaturedCard({ pitch }: { pitch: Pitch }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="line-clamp-1 text-2xl font-bold text-foreground">
                   {pitch.title}
                 </h2>
                 <StatusBadge status={pitch.status} />
@@ -188,9 +188,9 @@ function LargeFeaturedCard({ pitch }: { pitch: Pitch }) {
 
           {/* Expanded content - absolutely positioned to overlay below content */}
           <div
-            className="space-y-3 overflow-hidden rounded-b-lg"
+            className="absolute left-0 right-0 z-20 space-y-3 overflow-hidden rounded-b-lg bg-card"
             style={{
-              top: '100%',
+              top: 'calc(100% - 1.5rem)',
               maxHeight: isHovered ? '1000px' : '0',
               opacity: isHovered ? 1 : 0,
               transition: `max-height ${ANIMATION_DURATION} ${ANIMATION_EASING}, opacity ${ANIMATION_DURATION} ${ANIMATION_EASING}`,
@@ -199,12 +199,14 @@ function LargeFeaturedCard({ pitch }: { pitch: Pitch }) {
                 : 'none',
             }}
           >
-            <p className="text-sm leading-relaxed text-foreground">
-              {pitch.summary}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{pitch.industry}</Badge>
-              <Badge variant="outline">{pitch.location}</Badge>
+            <div className="px-6 pb-6 pt-4">
+              <p className="line-clamp-4 text-sm leading-relaxed text-foreground">
+                {pitch.summary}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{pitch.industry}</Badge>
+                <Badge variant="outline">{pitch.location}</Badge>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -220,7 +222,7 @@ function SmallFeaturedCard({ pitch }: { pitch: Pitch }) {
   const daysLeft = calculateDaysLeft(pitch.dateSubmitted, pitch.timeToRaise);
 
   return (
-    <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+    <Link href={routes.pitchDetails(pitch.id)}>
       <Card
         className="relative cursor-pointer overflow-visible rounded-lg pt-0"
         style={{
@@ -297,7 +299,7 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
 
   return (
     <div className="relative w-[320px] flex-shrink-0">
-      <Link href={routes.pitchDetails.replace('[id]', pitch.id)}>
+      <Link href={routes.pitchDetails(pitch.id)}>
         <Card
           className="cursor-pointer overflow-visible pt-0"
           style={{
@@ -343,7 +345,7 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <h3 className="text-lg font-bold text-foreground">
+                  <h3 className="line-clamp-1 text-lg font-bold text-foreground">
                     {pitch.title}
                   </h3>
                   <StatusBadge status={pitch.status} />
@@ -364,7 +366,7 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
 
             {/* Expanded content - absolutely positioned to overlay below content */}
             <div
-              className="left-0 right-0 space-y-3 overflow-hidden rounded-b-lg px-4 pb-4"
+              className="absolute left-0 right-0 z-20 space-y-3 overflow-hidden rounded-b-lg bg-card px-4 pb-4"
               style={{
                 top: '100%',
                 maxHeight: isHovered ? '500px' : '0',
@@ -375,7 +377,7 @@ function PitchCard({ pitch }: { pitch: Pitch }) {
                   : 'none',
               }}
             >
-              <p className="text-sm leading-relaxed text-foreground">
+              <p className="line-clamp-3 text-sm leading-relaxed text-foreground">
                 {pitch.summary}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -423,9 +425,9 @@ function PoolCard({ pool }: { pool: Pool }) {
   const fundingPercentage =
     pool.fundingGoal && pool.currentFunding
       ? Math.min(
-          100,
-          Math.round((pool.currentFunding / pool.fundingGoal) * 100),
-        )
+        100,
+        Math.round((pool.currentFunding / pool.fundingGoal) * 100),
+      )
       : 0;
 
   return (
@@ -500,7 +502,7 @@ function PoolCard({ pool }: { pool: Pool }) {
 
             {/* Expanded content on hover */}
             <div
-              className="left-0 right-0 space-y-3 overflow-hidden rounded-b-lg px-4 pb-4"
+              className="absolute left-0 right-0 z-20 space-y-3 overflow-hidden rounded-b-lg bg-card px-4 pb-4"
               style={{
                 top: '100%',
                 maxHeight: isHovered ? '500px' : '0',
@@ -551,7 +553,7 @@ export function IndustryCarousel({ pitches }: { pitches: Pitch[] }) {
     <div className="group relative -mx-12">
       <div
         ref={scrollRef}
-        className="scrollbar-hide flex h-auto gap-4 scroll-smooth px-12 py-4"
+        className="scrollbar-hide flex h-auto gap-4 scroll-smooth px-12 pt-4 pb-32"
         style={{
           overflowX: 'auto',
           overflowY: 'visible',
@@ -583,7 +585,7 @@ export function PoolsCarousel({ pools }: { pools: Pool[] }) {
     <div className="group relative -mx-12">
       <div
         ref={scrollRef}
-        className="scrollbar-hide flex h-auto gap-4 scroll-smooth px-12 py-4"
+        className="scrollbar-hide flex h-auto gap-4 scroll-smooth px-12 pt-4 pb-32"
         style={{
           overflowX: 'auto',
           overflowY: 'visible',

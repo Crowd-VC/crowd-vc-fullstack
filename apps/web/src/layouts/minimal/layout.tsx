@@ -6,8 +6,8 @@ import { FlashIcon } from '@/components/icons/flash';
 import SearchButton from '@/components/search/button';
 import ActiveLink from '@/components/ui/links/active-link';
 import Hamburger from '@/components/ui/hamburger';
-import WalletConnect from '@/components/nft/wallet-connect';
-import { MenuItems } from '@/layouts/sidebar/_layout-menu';
+import WalletConnect from '@/components/wallet-connect';
+// import { MenuItems } from '@/layouts/sidebar/_layout-menu';
 import { useIsMounted } from '@/lib/hooks/use-is-mounted';
 import { useBreakpoint } from '@/lib/hooks/use-breakpoint';
 import { useDrawer } from '@/components/drawer-views/context';
@@ -25,7 +25,7 @@ function NotificationButton() {
         href={
           '/' +
           (layout === LAYOUT_OPTIONS.MODERN ? '' : layout) +
-          routes.notification
+          routes.notifications
         }
       >
         <div className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-100 bg-white text-brand shadow-main transition-all hover:-translate-y-0.5 hover:shadow-large focus:-translate-y-0.5 focus:shadow-large focus:outline-none dark:border-gray-700 dark:bg-light-dark dark:text-white sm:h-12 sm:w-12">
@@ -99,7 +99,7 @@ export function Header() {
           </div>
           <Logo />
           {isMounted && ['xs', 'sm', 'md', 'lg'].indexOf(breakpoint) == -1 && (
-            <MenuItems />
+            <></>
           )}
         </div>
         <HeaderRightArea />

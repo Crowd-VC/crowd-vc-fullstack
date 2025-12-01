@@ -16,7 +16,7 @@ export function RootProvider({ children }: { children: React.ReactNode }) {
       <QueryProvider>
         <JotaiProvider>
           <SettingsButton />
-          <SettingsDrawer />
+          {/* <SettingsDrawer /> */}
           {children}
           <Suspense fallback={null}>
             <ModalsContainer />

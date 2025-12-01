@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../interfaces/ICrowdVCFactory.sol";
 import "../interfaces/ICrowdVCPool.sol";
@@ -13,7 +12,7 @@ import "./CrowdVCPool.sol";
 
 /**
  * @title CrowdVCFactory
- * @dev Gas-optimized upgradeable factory contract for CrowdVC platform
+ * @dev Gas-optimized factory contract for CrowdVC platform
  * @notice Handles user registration, pitch management, and pool deployment
  *
  * OPTIMIZATIONS APPLIED:
@@ -27,10 +26,9 @@ import "./CrowdVCPool.sol";
  */
 contract CrowdVCFactory is
     ICrowdVCFactory,
-    Initializable,
-    AccessControlUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    AccessControl,
+    Pausable,
+    ReentrancyGuard
 {
     using ValidationLib for *;
 
@@ -66,7 +64,7 @@ contract CrowdVCFactory is
 
     // ============ STATE VARIABLES (PACKED) ============
 
-    // Slot 1: address (20 bytes) + uint16 (2 bytes) + uint32 (4 bytes) + uint64 (8 bytes) = 34 bytes (fits in 2 slots)
+    // Slot 1: address (20 bytes) + uint16 (2 bytes) + uint32 (4 bytes) = 26 bytes
     address public treasury;
     uint16 public platformFeePercent; // Max 10000 basis points, uint16 sufficient
     uint32 public version; // uint32 sufficient for version numbers
@@ -90,43 +88,30 @@ contract CrowdVCFactory is
     // Nonce for pitch ID generation (prevents collision)
     uint256 private _pitchNonce;
 
-    /**
-     * @dev Storage gap for future upgrades (reduced to 40 slots after adding nonce)
-     */
-    uint256[40] private __gap;
-
     // ============ CONSTRUCTOR ============
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _poolImplementation) {
-        if (_poolImplementation == address(0)) revert ValidationLib.InvalidAddress();
-        poolImplementation = _poolImplementation;
-        _disableInitializers();
-    }
-
-    // ============ INITIALIZER ============
-
     /**
-     * @dev Initialize the contract (replaces constructor for upgradeable contracts)
+     * @dev Constructor initializes the factory contract
+     * @param _poolImplementation Address of the CrowdVCPool implementation for cloning
      * @param _treasury Address to receive platform fees
      * @param _platformFee Initial platform fee in basis points
-     * @param _usdt USDT token address on BASE
-     * @param _usdc USDC token address on BASE
+     * @param _usdt USDT token address
+     * @param _usdc USDC token address
      */
-    function initialize(
+    constructor(
+        address _poolImplementation,
         address _treasury,
         uint256 _platformFee,
         address _usdt,
         address _usdc
-    ) public initializer {
+    ) {
+        if (_poolImplementation == address(0)) revert ValidationLib.InvalidAddress();
         ValidationLib.validateAddress(_treasury);
         ValidationLib.validateAddress(_usdt);
         ValidationLib.validateAddress(_usdc);
         if (_platformFee > MAX_PLATFORM_FEE) revert FeeTooHigh();
 
-        __AccessControl_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
+        poolImplementation = _poolImplementation;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
