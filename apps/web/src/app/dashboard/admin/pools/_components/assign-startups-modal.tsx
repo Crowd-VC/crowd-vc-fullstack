@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
+// import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
 
 interface AssignStartupsModalProps {
   poolId: string;
@@ -42,12 +42,12 @@ export function AssignStartupsModal({
   const assignStartup = useAssignStartup();
   const removeStartup = useRemoveStartup();
 
-  const {
-    invokeTransaction,
-    isPending: isInvokingTransaction,
-    isSuccess: isSuccessInvokingTransaction,
-    error: errorInvokingTransaction,
-  } = useInvokeTransaction();
+  // const {
+  //   invokeTransaction,
+  //   isPending: isInvokingTransaction,
+  //   isSuccess: isSuccessInvokingTransaction,
+  //   error: errorInvokingTransaction,
+  // } = useInvokeTransaction();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -87,7 +87,7 @@ export function AssignStartupsModal({
 
   const handleAssign = async (pitchId: string) => {
     try {
-      await invokeTransaction();
+      // await invokeTransaction();
       await assignStartup.mutateAsync({ poolId, pitchId });
       toast.success('Startup assigned to pool');
     } catch (error) {

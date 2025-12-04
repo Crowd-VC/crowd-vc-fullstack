@@ -9,7 +9,7 @@ import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useChainId } from 'wagmi'
 import { CrowdVCFactoryABI, UserType } from '@crowd-vc/abis'
 import { getFactoryAddress } from '../../config/contracts'
-import { parseContractError } from '../../utils/errors'
+import { parseContractError, getCustomError, getErrorAction, isUserRejectionError } from '../../utils/errors'
 import { GAS_LIMITS } from '../../utils/constants'
 
 export type UseRegisterUserParams = {
@@ -60,6 +60,11 @@ export function useRegisterUser() {
   // Parse error for user-friendly message
   const error = writeError || receiptError
   const errorMessage = error ? parseContractError(error) : undefined
+  
+  // Enhanced error details
+  const customError = error ? getCustomError(error) : null
+  const errorAction = error ? getErrorAction(error) : null
+  const isUserRejection = error ? isUserRejectionError(error) : false
 
   return {
     registerUser,
@@ -69,6 +74,9 @@ export function useRegisterUser() {
     isSuccess,
     isLoading: isPending || isConfirming,
     error: errorMessage,
+    errorName: customError?.name,
+    errorAction,
+    isUserRejection,
     reset
   }
 }

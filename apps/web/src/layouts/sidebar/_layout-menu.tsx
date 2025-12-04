@@ -200,7 +200,7 @@ export default function DrawerMenu({
       dropdownItems: item?.dropdownItems?.map((dropdownItem: any) => ({
         name: dropdownItem.name,
         ...(dropdownItem?.icon && { icon: dropdownItem.icon }),
-        href: layoutOption + dropdownItem.href,
+        href: dropdownItem.href,
       })),
     }),
   }));

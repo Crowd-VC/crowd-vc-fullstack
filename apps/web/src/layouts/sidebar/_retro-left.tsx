@@ -33,10 +33,7 @@ export default function Sidebar({ className }: { className?: string }) {
       dropdownItems: item?.dropdownItems?.map((dropdownItem: any) => ({
         name: dropdownItem.name,
         ...(dropdownItem?.icon && { icon: dropdownItem.icon }),
-        href:
-          item.name === 'Authentication'
-            ? layoutOption + dropdownItem.href
-            : '/' + LAYOUT_OPTIONS.RETRO + dropdownItem.href,
+        href: dropdownItem.href,
       })),
     }),
   }));

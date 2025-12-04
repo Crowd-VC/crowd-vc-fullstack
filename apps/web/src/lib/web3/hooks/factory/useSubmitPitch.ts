@@ -10,7 +10,7 @@ import { useChainId } from 'wagmi';
 import { parseUnits } from 'viem';
 import { CrowdVCFactoryABI } from '@crowd-vc/abis';
 import { getFactoryAddress } from '../../config/contracts';
-import { parseContractError } from '../../utils/errors';
+import { parseContractError, getCustomError, getErrorAction, isUserRejectionError } from '../../utils/errors';
 import { validatePitchTitle, validateIPFSHash } from '../../utils/validators';
 import { GAS_LIMITS, DECIMALS } from '../../utils/constants';
 
@@ -77,6 +77,11 @@ export function useSubmitPitch() {
   // Parse error for user-friendly message
   const error = writeError || receiptError;
   const errorMessage = error ? parseContractError(error) : undefined;
+  
+  // Enhanced error details
+  const customError = error ? getCustomError(error) : null;
+  const errorAction = error ? getErrorAction(error) : null;
+  const isUserRejection = error ? isUserRejectionError(error) : false;
 
   return {
     submitPitch,
@@ -86,6 +91,9 @@ export function useSubmitPitch() {
     isSuccess,
     isLoading: isPending || isConfirming,
     error: errorMessage,
+    errorName: customError?.name,
+    errorAction,
+    isUserRejection,
     reset,
   };
 }

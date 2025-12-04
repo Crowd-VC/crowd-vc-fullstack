@@ -3,8 +3,7 @@
 import { Fragment, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Dialog } from "@/components/ui/dialog";
-import { Transition, TransitionChild } from "@/components/ui/transition";
+import { Dialog, Transition } from "@headlessui/react";
 import { type DRAWER_VIEW, useDrawer } from "@/components/drawer-views/context";
 import { useLayout } from "@/lib/hooks/use-layout";
 import { LAYOUT_OPTIONS } from "@/lib/constants";
@@ -68,44 +67,46 @@ export default function DrawersContainer() {
 		<Transition appear show={isOpen} as={Fragment}>
 			<Dialog
 				as="div"
-				className="fixed inset-0 !z-[999] h-full w-full overflow-y-auto overflow-x-hidden"
+				className="fixed inset-0 !z-[999]"
 				onClose={closeDrawer}
 			>
-				<div className="min-h-screen flex-col items-center justify-center">
-					<TransitionChild
-						enter="ease-out duration-300"
-						enterFrom="opacity-0"
-						enterTo="opacity-100"
-						leave="ease-in duration-200"
-						leaveFrom="opacity-100"
-						leaveTo="opacity-0"
-					>
-						<div className="fixed inset-0 z-10 cursor-pointer bg-gray-700 bg-opacity-60 backdrop-blur" />
-					</TransitionChild>
+				<Transition.Child
+					as={Fragment}
+					enter="ease-out duration-300"
+					enterFrom="opacity-0"
+					enterTo="opacity-100"
+					leave="ease-in duration-200"
+					leaveFrom="opacity-100"
+					leaveTo="opacity-0"
+				>
+					<div className="fixed inset-0 bg-gray-700 bg-opacity-60 backdrop-blur" />
+				</Transition.Child>
 
-					{/* This element is need to fix FocusTap headless-ui warning issue */}
-					<div className="sr-only">
-						<button
-							onClick={closeDrawer}
-							className="opacity-50 hover:opacity-80 "
-						>
-							<Close className="h-auto w-[13px]" />
-						</button>
-					</div>
-
-					<TransitionChild
-						enter="transform transition ease-out duration-300"
-						enterFrom="-translate-x-full rtl:translate-x-full"
-						enterTo="translate-x-0"
-						leave="rtl:transform transition ease-in duration-300"
-						leaveFrom="rtl:translate-x-0 -translate-x-0"
-						leaveTo="rtl:translate-x-full -translate-x-full"
+				{/* This element is need to fix FocusTap headless-ui warning issue */}
+				<div className="sr-only">
+					<button
+						onClick={closeDrawer}
+						className="opacity-50 hover:opacity-80 "
 					>
-						<div className="h-full bg-white/95 shadow-[0_0_80px_rgba(17,24,39,0.2)] backdrop-blur dark:bg-dark/90">
+						<Close className="h-auto w-[13px]" />
+					</button>
+				</div>
+
+				<Transition.Child
+					as={Fragment}
+					enter="transform transition ease-out duration-300"
+					enterFrom="-translate-x-full rtl:translate-x-full"
+					enterTo="translate-x-0"
+					leave="transform transition ease-in duration-300"
+					leaveFrom="translate-x-0"
+					leaveTo="-translate-x-full rtl:translate-x-full"
+				>
+					<div className="fixed inset-y-0 left-0 z-10 w-full max-w-full xs:w-auto">
+						<div className="h-full w-full max-w-[280px] bg-white shadow-[0_0_80px_rgba(17,24,39,0.2)] dark:bg-dark xs:w-80">
 							{view && renderDrawerContent(view)}
 						</div>
-					</TransitionChild>
-				</div>
+					</div>
+				</Transition.Child>
 			</Dialog>
 		</Transition>
 	);

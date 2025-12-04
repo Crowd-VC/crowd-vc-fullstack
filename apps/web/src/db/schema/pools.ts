@@ -25,6 +25,10 @@ export const pools = pgTable("pools", {
     currentFunding: integer("current_funding").notNull().default(0),
     minContribution: integer("min_contribution").notNull().default(1000),
     maxContribution: integer("max_contribution"),
+    // Smart contract fields
+    contractAddress: text("contract_address"), // On-chain pool contract address
+    fundingDuration: integer("funding_duration"), // Duration in seconds for funding phase
+    acceptedToken: text("accepted_token"), // Token address for contributions (USDT/USDC)
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

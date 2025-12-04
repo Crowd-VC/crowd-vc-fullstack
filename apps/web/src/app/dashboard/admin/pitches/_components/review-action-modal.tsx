@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import type { PitchWithUser, RejectionReason } from '@/db/types';
 import { REJECTION_REASONS } from '@/db/types';
-import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
+// import { useInvokeTransaction } from '@/web3/useInvokeTransaction';
 
 interface ReviewActionModalProps {
   pitch: PitchWithUser | null;
@@ -48,12 +48,12 @@ export function ReviewActionModal({
   const [customNotes, setCustomNotes] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const {
-    invokeTransaction,
-    isPending: isInvokingTransaction,
-    isSuccess: isSuccessInvokingTransaction,
-    error: errorInvokingTransaction,
-  } = useInvokeTransaction();
+  // const {
+  //   // invokeTransaction,
+  //   isPending: isInvokingTransaction,
+  //   isSuccess: isSuccessInvokingTransaction,
+  //   error: errorInvokingTransaction,
+  // } = useInvokeTransaction();
   const handleConfirm = () => {
     if (activeTab === 'reject' && !rejectionReason) {
       return; // Require rejection reason
@@ -62,7 +62,7 @@ export function ReviewActionModal({
   };
 
   const handleFinalConfirm = async () => {
-    await invokeTransaction();
+    // await invokeTransaction();
     await onConfirm(
       activeTab === 'approve' ? 'approved' : 'rejected',
       activeTab === 'reject' ? rejectionReason : undefined,

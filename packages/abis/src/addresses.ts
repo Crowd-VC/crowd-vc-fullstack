@@ -2,7 +2,7 @@
  * Deployed Contract Addresses
  * Auto-generated from Ignition deployments - DO NOT EDIT MANUALLY
  * 
- * Generated at: 2025-12-01T22:41:37.881Z
+ * Generated at: 2025-12-04T11:20:00.000Z
  * Run 'pnpm generate:addresses' in packages/contracts to regenerate
  */
 
@@ -19,8 +19,8 @@ export interface ChainAddresses {
  */
 export const DeployedAddresses: Record<number, ChainAddresses> = {
   "11155111": {
-    "CrowdVCFactory": "0x96B1648de980Df752A3767c7eBd34fe788AB147F",
-    "CrowdVCPool_Implementation": "0xDB2fC434B70893ABEdc2B036337BEa24a5b7605F"
+    "CrowdVCFactory": "0x101848a3B850720345A6E239Ce33d25C296b43a4",
+    "CrowdVCPool_Implementation": "0xd57F1648C1EF5aD6cAA9379681719Cc3dB7CF72a"
   }
 } as const;
 

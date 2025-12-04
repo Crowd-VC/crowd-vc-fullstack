@@ -46,10 +46,11 @@ const TOKEN_ADDRESSES: Record<
       '0x0000000000000000000000000000000000000000') as `0x${string}`,
   },
   [sepolia.id]: {
+    // Mock tokens deployed for testing
     USDT: (process.env.NEXT_PUBLIC_USDT_ADDRESS_SEPOLIA ||
-      '0x0000000000000000000000000000000000000000') as `0x${string}`,
+      '0xa6C579F2E8c98fd7458d8A51C107adB0101BfcD0') as `0x${string}`,
     USDC: (process.env.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA ||
-      '0x0000000000000000000000000000000000000000') as `0x${string}`,
+      '0x8e9F7D669fB17650472fa474eAF4dd0015725C00') as `0x${string}`,
   },
 };
 

@@ -11,7 +11,7 @@ import { type Address, parseUnits } from 'viem'
 import { ERC20ABI } from '@crowd-vc/abis'
 import { type SupportedToken, getTokenDecimals } from '../../config/tokens'
 import { getUSDTAddress, getUSDCAddress } from '../../config/contracts'
-import { parseContractError } from '../../utils/errors'
+import { parseContractError, getCustomError, getErrorAction, isUserRejectionError } from '../../utils/errors'
 import { GAS_LIMITS, MAX_UINT256 } from '../../utils/constants'
 
 /**
@@ -80,6 +80,11 @@ export function useTokenApproval() {
   // Parse error for user-friendly message
   const error = writeError || receiptError
   const errorMessage = error ? parseContractError(error) : undefined
+  
+  // Enhanced error details
+  const customError = error ? getCustomError(error) : null
+  const errorAction = error ? getErrorAction(error) : null
+  const isUserRejection = error ? isUserRejectionError(error) : false
 
   return {
     approve,
@@ -89,6 +94,9 @@ export function useTokenApproval() {
     isSuccess,
     isLoading: isPending || isConfirming,
     error: errorMessage,
+    errorName: customError?.name,
+    errorAction,
+    isUserRejection,
     reset
   }
 }
