@@ -1,4 +1,4 @@
-import { CloudUpload, Play, CheckCircle, Trash2 } from "lucide-react";
+import { CloudUpload, ImageIcon, CheckCircle, Trash2 } from "lucide-react";
 import Button from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { FileUploadType } from "../types";
@@ -60,7 +60,7 @@ export function FileUploadArea({
 						{isPitchDeck ? (
 							<CheckCircle className="h-5 w-5 text-green-500" />
 						) : (
-							<Play className="h-5 w-5 text-green-500" />
+							<ImageIcon className="h-5 w-5 text-green-500" />
 						)}
 					</div>
 					<div>
@@ -99,7 +99,7 @@ export function FileUploadArea({
 			onDragLeave={(e) => handleDrag(e, "")}
 			onDragOver={(e) => handleDrag(e, type)}
 			onDrop={(e) => onDrop(e, type)}
-			aria-label={`Upload ${isPitchDeck ? "pitch deck" : "pitch video"}`}
+			aria-label={`Upload ${isPitchDeck ? "pitch deck" : "pitch image"}`}
 		>
 			<div className="flex flex-col items-center">
 				<div
@@ -116,7 +116,7 @@ export function FileUploadArea({
 							)}
 						/>
 					) : (
-						<Play
+						<ImageIcon
 							className={cn(
 								"h-8 w-8 transition-colors",
 								dragActive === type ? "text-primary" : "text-muted-foreground",
@@ -125,7 +125,7 @@ export function FileUploadArea({
 					)}
 				</div>
 				<p className="text-lg font-medium text-foreground mb-2">
-					Drop your {isPitchDeck ? "pitch deck" : "pitch video"} here
+					Drop your {isPitchDeck ? "pitch deck" : "pitch image"} here
 				</p>
 				<p className="text-sm text-muted-foreground mb-1">
 					or click to browse files
@@ -133,7 +133,7 @@ export function FileUploadArea({
 				<p className="text-xs text-muted-foreground">
 					{isPitchDeck
 						? "PDF files up to 10MB"
-						: "MP4, MOV, AVI files up to 100MB"}
+						: "JPG, PNG files up to 10MB"}
 				</p>
 			</div>
 		</button>

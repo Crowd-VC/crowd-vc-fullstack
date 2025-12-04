@@ -18,7 +18,7 @@ export type FormData = {
   location: string;
   website?: string;
   pitchDeck?: File;
-  pitchVideo?: File;
+  pitchImage?: File;
   pitchVideoLink?: string;
   demoUrl?: string;
   prototypeUrl?: string;
@@ -49,4 +49,4 @@ export interface StepInfo {
   subtitle: string;
 }
 
-export type FileUploadType = 'pitch_deck' | 'pitch_video';
+export type FileUploadType = 'pitch_deck' | 'pitch_image';

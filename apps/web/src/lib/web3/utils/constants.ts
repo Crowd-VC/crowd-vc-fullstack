@@ -8,24 +8,24 @@
  */
 export const GAS_LIMITS = {
   // Factory contract operations
-  REGISTER_USER: BigInt(200_000_000),
-  SUBMIT_PITCH: BigInt(250_000_000),
-  UPDATE_PITCH_STATUS: BigInt(150_000_000),
-  CREATE_POOL: BigInt(5_000_000_000), // Pool deployment is gas-intensive
+  REGISTER_USER: BigInt(200_0000),
+  SUBMIT_PITCH: BigInt(250_0000),
+  UPDATE_PITCH_STATUS: BigInt(150_0000),
+  CREATE_POOL: BigInt(5_000_0000), // Pool deployment is gas-intensive
 
   // Token operations
-  TOKEN_APPROVE: BigInt(100_000_000),
-  TOKEN_TRANSFER: BigInt(65_000_000),
+  TOKEN_APPROVE: BigInt(100_0000),
+  TOKEN_TRANSFER: BigInt(65_0000),
 
   // Pool contract operations
-  CONTRIBUTE: BigInt(300_000_000),
-  VOTE: BigInt(150_000_000),
-  WITHDRAW_EARLY: BigInt(200_000_000),
-  REQUEST_REFUND: BigInt(200_000_000),
-  END_VOTING: BigInt(500_000_000_000),
-  ADD_MILESTONES: BigInt(300_000_000),
-  COMPLETE_MILESTONE: BigInt(150_000_000),
-  DISTRIBUTE_MILESTONE_FUNDS: BigInt(250_000_000),
+  CONTRIBUTE: BigInt(300_0000),
+  VOTE: BigInt(150_000),
+  WITHDRAW_EARLY: BigInt(200_0000),
+  REQUEST_REFUND: BigInt(200_0000),
+  END_VOTING: BigInt(500_0000),
+  ADD_MILESTONES: BigInt(300_0000),
+  COMPLETE_MILESTONE: BigInt(150_0000),
+  DISTRIBUTE_MILESTONE_FUNDS: BigInt(250_0000),
 } as const;
 
 /**
@@ -57,14 +57,14 @@ export const MAX_POOL_WINNERS = 3;
  */
 export const LIMITS = {
   // Contribution limits
-  MIN_CONTRIBUTION_USDT: '10', // $10 minimum
-  MIN_CONTRIBUTION_USDC: '10', // $10 minimum
+  MIN_CONTRIBUTION_USDT: "10", // $10 minimum
+  MIN_CONTRIBUTION_USDC: "10", // $10 minimum
 
   // Pitch limits
   MIN_PITCH_TITLE_LENGTH: 5,
   MAX_PITCH_TITLE_LENGTH: 100,
-  MIN_FUNDING_GOAL: '1000', // $1,000 minimum
-  MAX_FUNDING_GOAL: '10000000', // $10M maximum
+  MIN_FUNDING_GOAL: "1000", // $1,000 minimum
+  MAX_FUNDING_GOAL: "10000000", // $10M maximum
 
   // Pool limits
   MIN_VOTING_DURATION: 86400, // 1 day in seconds
@@ -169,7 +169,7 @@ export const POOL_STATUS = {
  * Zero address constant
  */
 export const ZERO_ADDRESS =
-  '0x0000000000000000000000000000000000000000' as const;
+  "0x0000000000000000000000000000000000000000" as const;
 
 /**
  * Maximum uint256 value (for unlimited approvals)
@@ -187,22 +187,22 @@ export const BASIS_POINTS_DENOMINATOR = BigInt(10000);
  */
 export const EVENTS = {
   // Factory events
-  USER_REGISTERED: 'UserRegistered',
-  PITCH_SUBMITTED: 'PitchSubmitted',
-  PITCH_STATUS_UPDATED: 'PitchStatusUpdated',
-  POOL_CREATED: 'PoolCreated',
+  USER_REGISTERED: "UserRegistered",
+  PITCH_SUBMITTED: "PitchSubmitted",
+  PITCH_STATUS_UPDATED: "PitchStatusUpdated",
+  POOL_CREATED: "PoolCreated",
 
   // Pool events
-  CONTRIBUTION_MADE: 'ContributionMade',
-  VOTE_CAST: 'VoteCast',
-  EARLY_WITHDRAWAL: 'EarlyWithdrawal',
-  VOTING_ENDED: 'VotingEnded',
-  MILESTONE_COMPLETED: 'MilestoneCompleted',
-  FUNDS_DISTRIBUTED: 'FundsDistributed',
-  REFUNDED: 'Refunded',
-  POOL_CLOSED: 'PoolClosed',
+  CONTRIBUTION_MADE: "ContributionMade",
+  VOTE_CAST: "VoteCast",
+  EARLY_WITHDRAWAL: "EarlyWithdrawal",
+  VOTING_ENDED: "VotingEnded",
+  MILESTONE_COMPLETED: "MilestoneCompleted",
+  FUNDS_DISTRIBUTED: "FundsDistributed",
+  REFUNDED: "Refunded",
+  POOL_CLOSED: "PoolClosed",
 
   // Token events
-  TRANSFER: 'Transfer',
-  APPROVAL: 'Approval',
+  TRANSFER: "Transfer",
+  APPROVAL: "Approval",
 } as const;

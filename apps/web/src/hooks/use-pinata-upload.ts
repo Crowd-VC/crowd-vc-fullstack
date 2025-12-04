@@ -4,6 +4,7 @@ import { uploadPitch } from '@/app/actions/pinata';
 interface UploadResult {
   success: boolean;
   fileCid?: string;
+  imageCid?: string;
   metadataCid?: string;
   error?: string;
 }
@@ -13,7 +14,7 @@ export function usePinataUpload() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<UploadResult | null>(null);
 
-  const uploadToPinata = async (file: File, metadata: any) => {
+  const uploadToPinata = async (file: File, metadata: any, imageFile?: File) => {
     setIsUploading(true);
     setError(null);
     setData(null);
@@ -21,6 +22,9 @@ export function usePinataUpload() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (imageFile) {
+        formData.append('imageFile', imageFile);
+      }
       formData.append('metadata', JSON.stringify(metadata));
 
       const result = await uploadPitch(formData);

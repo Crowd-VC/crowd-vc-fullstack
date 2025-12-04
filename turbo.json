@@ -1,6 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "PRIVY_APP_ID",
+    "PRIVY_APP_SECRET",
+    "RESEND_API_KEY",
+    "STACK_SECRET_SERVER_KEY",
+    "DATABASE_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

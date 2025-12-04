@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import { PinataSDK } from "pinata";
 
@@ -10,6 +10,7 @@ const pinata = new PinataSDK({
 export async function uploadPitch(formData: FormData) {
   try {
     const file = formData.get("file") as File;
+    const imageFile = formData.get("imageFile") as File | null;
     const metadataString = formData.get("metadata") as string;
     const metadata = JSON.parse(metadataString);
 
@@ -17,13 +18,24 @@ export async function uploadPitch(formData: FormData) {
       throw new Error("No file provided");
     }
 
-    // Upload file
+    // Upload file (Pitch Deck)
     const fileUpload = await pinata.upload.public.file(file);
+    let imageCid: string | undefined;
 
-    // Add file CID to metadata
+    // Upload Image if provided
+    if (imageFile) {
+      const imageUpload = await pinata.upload.public.file(imageFile);
+      imageCid = imageUpload.cid;
+    }
+
+    // Add file CIDs to metadata
     const finalMetadata = {
       ...metadata,
       fileCid: fileUpload.cid,
+      imageCid: imageCid,
+      imageUrl: imageCid
+        ? `https://gateway.pinata.cloud/ipfs/${imageCid}`
+        : undefined,
     };
 
     // Upload metadata JSON
@@ -32,6 +44,7 @@ export async function uploadPitch(formData: FormData) {
     return {
       success: true,
       fileCid: fileUpload.cid,
+      imageCid: imageCid,
       metadataCid: jsonUpload.cid,
     };
   } catch (error) {

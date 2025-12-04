@@ -15,16 +15,16 @@ const fileSchema = z
     'File size must be less than 10MB',
   );
 
-const videoFileSchema = z
+const imageFileSchema = z
   .instanceof(File)
   .optional()
   .refine(
-    (file) => !file || file.size <= 100 * 1024 * 1024,
-    'Video size must be less than 100MB',
+    (file) => !file || file.size <= 10 * 1024 * 1024,
+    'Image size must be less than 10MB',
   )
   .refine(
-    (file) => !file || file.type.startsWith('video/'),
-    'File must be a video',
+    (file) => !file || file.type.startsWith('image/'),
+    'File must be an image',
   );
 
 const pdfFileSchema = z
@@ -104,7 +104,7 @@ export const mediaUploadSchema = z.object({
       ),
     z.undefined(),
   ]),
-  pitchVideo: videoFileSchema,
+  pitchImage: imageFileSchema,
   pitchVideoLink: z
     .string()
     .optional()
@@ -265,7 +265,7 @@ export const stepFieldKeys = {
   ] as const,
   2: [
     'pitchDeck',
-    'pitchVideo',
+    'pitchImage',
     'pitchVideoLink',
     'demoUrl',
     'socialUrl',

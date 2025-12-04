@@ -1,4 +1,4 @@
-import { FileText, VideoIcon, ExternalLink, Code } from 'lucide-react';
+import { FileText, ImageIcon, ExternalLink, Code } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   FormField,
@@ -33,7 +33,7 @@ export function MediaUploadStep({
   onDrop,
 }: MediaUploadStepProps) {
   const pitchDeck = form.watch('pitchDeck') || null;
-  const pitchVideo = form.watch('pitchVideo') || null;
+  const pitchImage = form.watch('pitchImage') || null;
 
   return (
     <div className="space-y-8">
@@ -68,18 +68,18 @@ export function MediaUploadStep({
 
       <FormField
         control={form.control}
-        name="pitchVideo"
+        name="pitchImage"
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center gap-2">
-              <VideoIcon className="h-5 w-5 text-primary" />
-              Pitch Video (Optional)
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Pitch Image
             </FormLabel>
             <FormControl>
               <div>
                 <FileUploadArea
-                  type="pitch_video"
-                  file={pitchVideo}
+                  type="pitch_image"
+                  file={pitchImage}
                   dragActive={dragActive}
                   onFileUpload={onFileUpload}
                   onFileRemove={onFileRemove}

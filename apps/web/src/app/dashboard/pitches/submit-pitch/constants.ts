@@ -49,7 +49,7 @@ export const STEPS: StepInfo[] = [
     {
         step: 2,
         title: "Media Uploads",
-        subtitle: "Deck & video",
+        subtitle: "Deck & Image",
     },
     {
         step: 3,
@@ -69,10 +69,10 @@ export const FILE_CONSTRAINTS = {
         acceptedTypes: ["application/pdf"],
         acceptAttribute: ".pdf",
     },
-    PITCH_VIDEO: {
-        maxSize: 100 * 1024 * 1024, // 100MB
-        acceptedTypes: ["video/*"],
-        acceptAttribute: "video/*",
+    PITCH_IMAGE: {
+        maxSize: 10 * 1024 * 1024, // 10MB
+        acceptedTypes: ["image/*"],
+        acceptAttribute: "image/*",
     },
 } as const;
 

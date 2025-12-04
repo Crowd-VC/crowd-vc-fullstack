@@ -1,19 +1,19 @@
-import { useCallback, useState } from 'react';
-import { useForm, type UseFormReturn } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback, useState } from "react";
+import { useForm, type UseFormReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CompleteFormData,
   completeFormSchema,
   getStepFields,
   getStepSchema,
-} from '../validation';
-import type { FileUploadType } from '../types';
-import { usePitchesStore } from '@/lib/stores/pitches';
-import { DEFAULT_VALUES } from '../constants';
-import { toast } from 'sonner';
-import { useWallet } from '@/hooks/use-wallet';
-import { usePinataUpload } from '@/hooks/use-pinata-upload';
-import { useSubmitPitch } from '@/lib/web3/hooks/factory/useSubmitPitch';
+} from "../validation";
+import type { FileUploadType } from "../types";
+import { usePitchesStore } from "@/lib/stores/pitches";
+import { DEFAULT_VALUES } from "../constants";
+import { toast } from "sonner";
+import { useWallet } from "@/hooks/use-wallet";
+import { usePinataUpload } from "@/hooks/use-pinata-upload";
+import { useSubmitPitch } from "@/lib/web3/hooks/factory/useSubmitPitch";
 
 const initialFormData: CompleteFormData = {
   title: DEFAULT_VALUES.TITLE,
@@ -26,12 +26,12 @@ const initialFormData: CompleteFormData = {
   location: DEFAULT_VALUES.LOCATION,
   website: DEFAULT_VALUES.WEBSITE,
   pitchDeck: undefined,
-  pitchVideo: undefined,
-  pitchVideoLink: '',
-  demoUrl: '',
-  socialUrl: '',
+  pitchImage: undefined,
+  pitchVideoLink: "",
+  demoUrl: "",
+  socialUrl: "",
   fundingGoal: DEFAULT_VALUES.FUNDING_GOAL,
-  customAmount: '',
+  customAmount: "",
   productDevelopment: DEFAULT_VALUES.PRODUCT_DEVELOPMENT,
   marketingSales: DEFAULT_VALUES.MARKETING_SALES,
   teamExpansion: DEFAULT_VALUES.TEAM_EXPANSION,
@@ -44,7 +44,7 @@ export const useFormState = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [submissionId, setSubmissionId] = useState<string>('');
+  const [submissionId, setSubmissionId] = useState<string>("");
   const [dragActive, setDragActive] = useState<string | null>(null);
   const { addPitch } = usePitchesStore();
   const { submitPitch } = useSubmitPitch();
@@ -52,7 +52,7 @@ export const useFormState = () => {
   const form = useForm<CompleteFormData>({
     resolver: zodResolver(completeFormSchema),
     defaultValues: initialFormData,
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   const { handleSubmit, reset, setValue, getValues, trigger, formState } = form;
@@ -82,10 +82,10 @@ export const useFormState = () => {
   // File upload handlers
   const handleFileUpload = useCallback(
     (file: File, type: FileUploadType) => {
-      if (type === 'pitch_deck') {
-        setValue('pitchDeck', file, { shouldValidate: true });
-      } else if (type === 'pitch_video') {
-        setValue('pitchVideo', file, { shouldValidate: true });
+      if (type === "pitch_deck") {
+        setValue("pitchDeck", file, { shouldValidate: true });
+      } else if (type === "pitch_image") {
+        setValue("pitchImage", file, { shouldValidate: true });
       }
     },
     [setValue],
@@ -93,10 +93,10 @@ export const useFormState = () => {
 
   const handleFileRemove = useCallback(
     (type: FileUploadType) => {
-      if (type === 'pitch_deck') {
-        setValue('pitchDeck', undefined, { shouldValidate: true });
-      } else if (type === 'pitch_video') {
-        setValue('pitchVideo', undefined, { shouldValidate: true });
+      if (type === "pitch_deck") {
+        setValue("pitchDeck", undefined, { shouldValidate: true });
+      } else if (type === "pitch_image") {
+        setValue("pitchImage", undefined, { shouldValidate: true });
       }
     },
     [setValue],
@@ -110,12 +110,12 @@ export const useFormState = () => {
     async (data: CompleteFormData) => {
       // 1. Validate Prerequisites
       if (!wallet.address) {
-        toast.error('Please connect your wallet to submit a pitch');
+        toast.error("Please connect your wallet to submit a pitch");
         return;
       }
 
       if (!data.pitchDeck) {
-        toast.error('Pitch deck is required');
+        toast.error("Pitch deck is required");
         return;
       }
 
@@ -127,19 +127,23 @@ export const useFormState = () => {
           ...data,
           walletAddress: wallet.address,
           pitchDeck: undefined,
-          pitchVideo: undefined,
+          pitchImage: undefined,
           submittedAt: new Date().toISOString(),
         };
 
-        const pinataResult = await uploadToPinata(data.pitchDeck, metadata);
+        const pinataResult = await uploadToPinata(
+          data.pitchDeck,
+          metadata,
+          data.pitchImage || undefined,
+        );
 
         if (!pinataResult.success || !pinataResult.metadataCid) {
           throw new Error(
-            pinataResult.error || 'Failed to upload pitch data to IPFS',
+            pinataResult.error || "Failed to upload pitch data to IPFS",
           );
         }
 
-        const { fileCid, metadataCid } = pinataResult;
+        const { fileCid, metadataCid, imageCid } = pinataResult;
 
         // 3. Blockchain Submission
         // Submit the IPFS CID (metadata hash) to the factory contract
@@ -150,7 +154,7 @@ export const useFormState = () => {
         });
 
         if (!txHash) {
-          throw new Error('Transaction failed: No hash returned');
+          throw new Error("Transaction failed: No hash returned");
         }
 
         // 4. API Submission (Backend)
@@ -185,18 +189,19 @@ export const useFormState = () => {
           pitchDeckUrl: fileCid
             ? `https://gateway.pinata.cloud/ipfs/${fileCid}`
             : undefined,
-          pitchVideoUrl: data.pitchVideo
-            ? `/uploads/pitch-video-${Date.now()}.mp4` // Placeholder for video upload if needed
-            : data.pitchVideoLink || undefined,
+          imageUrl: imageCid
+            ? `https://gateway.pinata.cloud/ipfs/${imageCid}`
+            : undefined,
+          pitchVideoUrl: data.pitchVideoLink || undefined,
           metadataCid: metadataCid,
           demoUrl: data.demoUrl,
           prototypeUrl: data.socialUrl,
         };
 
-        const response = await fetch('/api/pitches', {
-          method: 'POST',
+        const response = await fetch("/api/pitches", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(pitchPayload),
         });
@@ -204,7 +209,7 @@ export const useFormState = () => {
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.message || 'Failed to save pitch to database',
+            errorData.message || "Failed to save pitch to database",
           );
         }
 
@@ -215,24 +220,27 @@ export const useFormState = () => {
         addPitch({
           ...createdPitch,
           // Ensure strictly typed fields if API returns loose types
-          status: createdPitch.status || 'pending',
+          status: createdPitch.status || "pending",
           fundingGoal: createdPitch.fundingGoal || data.fundingGoal,
         });
 
         setSubmissionId(createdPitch.submissionId || createdPitch.id);
-        console.log('Pitch submitted successfully:', createdPitch);
+        console.log("Pitch submitted successfully:", createdPitch);
         setShowSuccess(true);
-      } catch (error: any) {
-        console.error('Error submitting pitch:', error);
+      } catch (error: unknown) {
+        console.error("Error submitting pitch:", error);
 
         // User friendly error mapping
-        let message = 'Failed to submit pitch';
-        if (error.message.includes('User rejected')) {
-          message = 'Transaction rejected by user';
-        } else if (error.message.includes('insufficient funds')) {
-          message = 'Insufficient funds for transaction';
-        } else if (error.message) {
-          message = error.message;
+        let message = "Failed to submit pitch";
+
+        if (error instanceof Error) {
+          if (error.message.includes("User rejected")) {
+            message = "Transaction rejected by user";
+          } else if (error.message.includes("insufficient funds")) {
+            message = "Insufficient funds for transaction";
+          } else if (error.message) {
+            message = error.message;
+          }
         }
 
         toast.error(message);
@@ -249,7 +257,7 @@ export const useFormState = () => {
     setCurrentStep(1);
     setIsSubmitting(false);
     setShowSuccess(false);
-    setSubmissionId('');
+    setSubmissionId("");
     setDragActive(null);
   }, [reset]);
 

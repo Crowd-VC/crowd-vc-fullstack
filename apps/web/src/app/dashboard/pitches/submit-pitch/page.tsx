@@ -77,8 +77,8 @@ export default function SubmitPitchPage() {
         const constraints =
           FILE_CONSTRAINTS[type.toUpperCase() as keyof typeof FILE_CONSTRAINTS];
         const isValidType = constraints.acceptedTypes.some((acceptedType) =>
-          acceptedType === 'video/*'
-            ? file.type.startsWith('video/')
+          acceptedType === 'image/*'
+            ? file.type.startsWith('image/')
             : file.type === acceptedType,
         );
         if (isValidType) {

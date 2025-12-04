@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createPitch } from "@/db/queries/pitches";
+import { createUser, getUserByWallet } from "@/db/queries/users";
 import type { NewPitch } from "@/db/schema/pitches";
+import type { NewUser } from "@/db/schema/users";
 
 /**
  * POST /api/pitches
@@ -10,9 +12,48 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // TODO: Get actual user ID from session/auth
-        // For now, using a placeholder user ID
-        const userId = body.userId || "user_2";
+        // Get user ID from body (expected to be wallet address)
+        let userId = body.userId || "user_2";
+
+        // If userId looks like a wallet address, ensure user exists in DB
+        if (typeof userId === "string" && userId.startsWith("0x")) {
+            const existingUser = await getUserByWallet(userId);
+
+            if (existingUser) {
+                // Use the existing user's ID (which might be different from wallet address)
+                userId = existingUser.id;
+            } else {
+                // Create new user if not found
+                // Using wallet address as ID for simplicity
+                const newUserId = userId;
+                const newUser: NewUser = {
+                    id: newUserId,
+                    email: `${userId}@placeholder.crowdvc.com`, // Placeholder email required by schema
+                    walletAddress: userId,
+                    name: "Startup Founder",
+                    userType: "startup",
+                };
+
+                try {
+                    await createUser(newUser);
+                    userId = newUserId;
+                } catch (userError) {
+                    console.error(
+                        "[API] Error creating user for pitch:",
+                        userError,
+                    );
+                    // If user creation fails (e.g. race condition), try to fetch again
+                    const retryUser = await getUserByWallet(userId);
+                    if (retryUser) {
+                        userId = retryUser.id;
+                    } else {
+                        throw new Error(
+                            "Failed to create user profile for wallet",
+                        );
+                    }
+                }
+            }
+        }
 
         // Generate unique IDs
         const pitchId = `pitch_${Date.now()}_${
@@ -63,6 +104,7 @@ export async function POST(request: NextRequest) {
             // Media URLs (these would be actual upload URLs in production)
             pitchDeckUrl: body.pitchDeckUrl || null,
             pitchVideoUrl: body.pitchVideoUrl || null,
+            imageUrl: body.imageUrl || null,
             demoUrl: body.demoUrl || null,
             prototypeUrl: body.prototypeUrl || null,
         };
