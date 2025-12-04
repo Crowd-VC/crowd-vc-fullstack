@@ -61,6 +61,7 @@ export default function Sidebar({ className }: { className?: string }) {
 
   return (
     <aside
+      suppressHydrationWarning
       ref={ref}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -138,6 +139,7 @@ export default function Sidebar({ className }: { className?: string }) {
       </SimpleBar>
       {address && (
         <div
+          suppressHydrationWarning
           className={cn('sticky bottom-5 mt-3 pl-4 2xl:mt-12', open && 'px-8')}
         >
           {!open ? (
