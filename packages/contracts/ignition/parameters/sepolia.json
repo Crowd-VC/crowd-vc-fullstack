@@ -1,10 +1,8 @@
 {
   "FactoryModule": {
-    "treasury": "0x3421cA63561A5B6b42D2685C25B20324C5832D85",
+    "treasury": "0x9E8840A4E5867853aC357B0172EbF825143ffd90",
     "platformFee": 500,
     "usdt": "0xa6C579F2E8c98fd7458d8A51C107adB0101BfcD0",
     "usdc": "0x8e9F7D669fB17650472fa474eAF4dd0015725C00"
   }
 }
-
-

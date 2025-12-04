@@ -18,7 +18,7 @@ import { zeroAddress } from 'viem'
  * - Emergency functions
  * - Access control enforcement
  */
-describe('CrowdVCFactory - Admin Functions', function () {
+describe('CrowdVCFactory - Admin Functions', () => {
   let viem: Awaited<ReturnType<typeof network.connect>>['viem']
   let loadFixture: Awaited<ReturnType<typeof network.connect>>['networkHelpers']['loadFixture']
 
@@ -88,8 +88,8 @@ describe('CrowdVCFactory - Admin Functions', function () {
     }
   }
 
-  describe('Pitch Status Management', function () {
-    it('should allow admin to approve pitch', async function () {
+  describe('Pitch Status Management', () => {
+    it('should allow admin to approve pitch', async () => {
       const { factory, pitchIds, deployer } = await loadFixture(
         deployFactoryWithPitchesFixture
       )
@@ -194,7 +194,7 @@ describe('CrowdVCFactory - Admin Functions', function () {
       expect(pitchData.status).to.equal(5)
     })
 
-    it('should allow checking pitch approval status', async function () {
+    it('should allow checking pitch approval status', async () => {
       const { factory, pitchIds, deployer } = await loadFixture(
         deployFactoryWithPitchesFixture
       )
