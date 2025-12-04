@@ -45,7 +45,7 @@ export default defineConfig({
       chainType: 'l1',
       url:
         process.env.SEPOLIA_RPC_URL ||
-        'https://ethereum-sepolia-rpc.publicnode.com',
+        'https://eth-sepolia-testnet.api.pocket.network',
       accounts: [
         '0x599ddb68419a278cdb069223cf4af3dd7eea30c20c0fd60d402df6c7dd4502a5',
       ],

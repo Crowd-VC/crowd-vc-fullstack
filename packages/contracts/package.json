@@ -8,10 +8,18 @@
     "test": "hardhat test",
     "node": "hardhat node",
     "deploy": "hardhat run scripts/deploy.ts",
-    "deploy:base": "hardhat run scripts/deploy.ts --network base",
+    "deploy:base": "hardhat run --network base scripts/deploy.ts",
     "verify": "hardhat verify",
     "clean": "hardhat clean",
-    "generate:addresses": "tsx scripts/generateAddresses.ts"
+    "generate:addresses": "hardhat run scripts/generateAddresses.ts",
+    "deploy-and-update": "hardhat run scripts/deploy-and-update.ts",
+    "deploy:sepolia": "hardhat run --network sepolia scripts/deploy-and-update.ts",
+    "deploy:sepolia:verify": "DEPLOY_VERIFY=true hardhat run --network sepolia scripts/deploy-and-update.ts",
+    "deploy:baseSepolia": "DEPLOY_MOCKS=true hardhat run --network baseSepolia scripts/deploy-and-update.ts",
+    "deploy:baseMainnet": "hardhat run --network baseMainnet scripts/deploy-and-update.ts",
+    "deploy:baseMainnet:verify": "DEPLOY_VERIFY=true hardhat run --network baseMainnet scripts/deploy-and-update.ts",
+    "deploy:hardhat": "hardhat run --network hardhat scripts/deploy-and-update.ts",
+    "full-deploy": "DEPLOY_CLEAN=true pnpm compile && pnpm deploy-and-update"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",

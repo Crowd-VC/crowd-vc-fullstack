@@ -1,4 +1,3 @@
-#!/usr/bin/env tsx
 /**
  * Generate TypeScript addresses file from Ignition deployments
  *

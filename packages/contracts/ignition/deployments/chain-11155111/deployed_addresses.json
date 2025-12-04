@@ -1,6 +1,4 @@
 {
-  "FactoryModule#CrowdVCPool_Implementation": "0xd57F1648C1EF5aD6cAA9379681719Cc3dB7CF72a",
-  "FactoryModule#CrowdVCFactory": "0x101848a3B850720345A6E239Ce33d25C296b43a4",
-  "MockTokensModule#MockUSDC": "0x8e9F7D669fB17650472fa474eAF4dd0015725C00",
-  "MockTokensModule#MockUSDT": "0xa6C579F2E8c98fd7458d8A51C107adB0101BfcD0"
+  "FactoryModule#CrowdVCPool_Implementation": "0xB84356b7BAfA9CF2b8D6B8459772Aa4cF13D3Db2",
+  "FactoryModule#CrowdVCFactory": "0x248688B859ba6276AbC33AF7d2FCAC07488b768B"
 }
