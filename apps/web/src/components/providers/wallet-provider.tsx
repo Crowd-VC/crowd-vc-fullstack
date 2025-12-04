@@ -21,7 +21,8 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 createAppKit({
   adapters: [wagmiAdapter],
-  networks: [isDevelopment ? sepolia : base],
+  // networks: [isDevelopment ? sepolia : base],
+  networks: [sepolia],
   metadata: wagmiMetaData,
   projectId,
   features: {
