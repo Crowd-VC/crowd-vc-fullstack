@@ -6,7 +6,7 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  ignoreBuildErrors: true,
+  transpilePackages: ['@crowd-vc/abis'],
   ...(process.env.NODE_ENV === 'production' && {
     typescript: {
       ignoreBuildErrors: true,
