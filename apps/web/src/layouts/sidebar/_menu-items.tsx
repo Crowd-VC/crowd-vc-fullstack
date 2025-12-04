@@ -29,6 +29,7 @@ export const defaultMenuItems = [
     icon: <PoolIcon />,
     href: routes.pools,
   },
+  // TODO: Fix route - page exists at /dashboard/vote but link points to /dashboard/voting
   {
     name: 'Voting',
     icon: <VoteIcon />,
@@ -53,44 +54,46 @@ export const defaultMenuItems = [
     //   },
     // ],
   },
-  {
-    name: 'Pitch Management',
-    icon: <CompassIcon />,
-    href: routes.managePitches,
-    dropdownItems: [
-      {
-        name: 'Pending Review',
-        href: routes.managePending,
-      },
-      {
-        name: 'Approved',
-        href: routes.manageApproved,
-      },
-      {
-        name: 'In Pools',
-        href: routes.manageInPools,
-      },
-    ],
-  },
-  {
-    name: 'Funding Status',
-    icon: <ExchangeIcon />,
-    href: routes.fundingStatus,
-    dropdownItems: [
-      {
-        name: 'Active Campaigns',
-        href: routes.fundingActive,
-      },
-      {
-        name: 'Completed',
-        href: routes.fundingCompleted,
-      },
-      {
-        name: 'Payouts',
-        href: routes.fundingPayouts,
-      },
-    ],
-  },
+  // TODO: Uncomment when pages are created
+  // {
+  //   name: 'Pitch Management',
+  //   icon: <CompassIcon />,
+  //   href: routes.managePitches,
+  //   dropdownItems: [
+  //     {
+  //       name: 'Pending Review',
+  //       href: routes.managePending,
+  //     },
+  //     {
+  //       name: 'Approved',
+  //       href: routes.manageApproved,
+  //     },
+  //     {
+  //       name: 'In Pools',
+  //       href: routes.manageInPools,
+  //     },
+  //   ],
+  // },
+  // TODO: Uncomment when pages are created
+  // {
+  //   name: 'Funding Status',
+  //   icon: <ExchangeIcon />,
+  //   href: routes.fundingStatus,
+  //   dropdownItems: [
+  //     {
+  //       name: 'Active Campaigns',
+  //       href: routes.fundingActive,
+  //     },
+  //     {
+  //       name: 'Completed',
+  //       href: routes.fundingCompleted,
+  //     },
+  //     {
+  //       name: 'Payouts',
+  //       href: routes.fundingPayouts,
+  //     },
+  //   ],
+  // },
   {
     name: 'Admin',
     icon: <LockIcon className="w-[18px]" />,
@@ -108,14 +111,15 @@ export const defaultMenuItems = [
         name: 'Pool Management',
         href: routes.adminPools,
       },
-      {
-        name: 'User Management',
-        href: routes.adminUsers,
-      },
-      {
-        name: 'Analytics',
-        href: routes.adminAnalytics,
-      },
+      // TODO: Uncomment when pages are created
+      // {
+      //   name: 'User Management',
+      //   href: routes.adminUsers,
+      // },
+      // {
+      //   name: 'Analytics',
+      //   href: routes.adminAnalytics,
+      // },
     ],
   },
   {

@@ -27,17 +27,16 @@ const imageFileSchema = z
     'File must be an image',
   );
 
-const pdfFileSchema = z
-  .instanceof(File)
-  .optional()
-  .refine(
-    (file) => !file || file.type === 'application/pdf',
-    'File must be a PDF',
-  )
-  .refine(
-    (file) => !file || file.size <= 10 * 1024 * 1024,
-    'File size must be less than 10MB',
-  );
+const pdfFileSchema = z.union([
+  z
+    .instanceof(File)
+    .refine((file) => file.type === 'application/pdf', 'File must be a PDF')
+    .refine(
+      (file) => file.size <= 10 * 1024 * 1024,
+      'File size must be less than 10MB',
+    ),
+  z.undefined(),
+]);
 
 // Step 1: Basic Information Schema
 export const basicInfoSchema = z.object({
@@ -94,16 +93,7 @@ export const basicInfoSchema = z.object({
 
 // Step 2: Media Upload Schema
 export const mediaUploadSchema = z.object({
-  pitchDeck: z.union([
-    z
-      .instanceof(File)
-      .refine((file) => file.type === 'application/pdf', 'File must be a PDF')
-      .refine(
-        (file) => file.size <= 10 * 1024 * 1024,
-        'File size must be less than 10MB',
-      ),
-    z.undefined(),
-  ]),
+  pitchDeck: pdfFileSchema,
   pitchImage: imageFileSchema,
   pitchVideoLink: z
     .string()
