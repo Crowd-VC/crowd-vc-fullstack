@@ -7,6 +7,15 @@ const nextConfig = {
     },
   },
   transpilePackages: ['@crowd-vc/abis'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'gateway.pinata.cloud',
+        pathname: '/ipfs/**',
+      },
+    ],
+  },
   ...(process.env.NODE_ENV === 'production' && {
     typescript: {
       ignoreBuildErrors: true,
