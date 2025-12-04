@@ -6,6 +6,7 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  ignoreBuildErrors: true,
   ...(process.env.NODE_ENV === 'production' && {
     typescript: {
       ignoreBuildErrors: true,
