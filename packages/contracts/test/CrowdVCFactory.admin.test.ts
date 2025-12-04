@@ -341,21 +341,6 @@ describe('CrowdVCFactory - Admin Functions', function () {
     it('should reject pool creation with empty name', async function () {
       const { factory, deployer, usdt, pitchIds } = await loadFixture(approvedPitchesFixture)
 
-      await expect(
-        factory.write.createPool(
-          [
-            '', // Empty name
-            'Tech',
-            BigInt(150_000 * 1e6),
-            BigInt(7 * 24 * 60 * 60),
-            BigInt(30 * 24 * 60 * 60),
-            pitchIds,
-            usdt.address,
-            BigInt(100 * 1e6),
-            0n,
-          ],
-          { account: deployer.account }
-        )
       await expectRevert(
         factory.write.createPool(
           [
@@ -381,21 +366,6 @@ describe('CrowdVCFactory - Admin Functions', function () {
       const MIN_POOL_GOAL = await factory.read.MIN_POOL_GOAL()
       const tooLow = MIN_POOL_GOAL - 1n
 
-      await expect(
-        factory.write.createPool(
-          [
-            'Test Pool',
-            'Tech',
-            tooLow,
-            BigInt(7 * 24 * 60 * 60),
-            BigInt(30 * 24 * 60 * 60),
-            pitchIds,
-            usdt.address,
-            BigInt(100 * 1e6),
-            0n,
-          ],
-          { account: deployer.account }
-        )
       await expectRevert(
         factory.write.createPool(
           [

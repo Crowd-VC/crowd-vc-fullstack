@@ -1,5 +1,5 @@
 import { Address } from "viem";
-import { UserType, PitchStatus, PoolStatus } from "./constants";
+import { PitchStatus, PoolStatus, UserType } from "./constants";
 
 /**
  * Contract Struct Types
@@ -34,16 +34,29 @@ export interface PitchData {
  * PoolInfo struct from ICrowdVCPool
  */
 export interface PoolInfo {
-  poolName: string;
+  name: string;
   category: string;
   fundingGoal: bigint;
   votingDeadline: bigint;
-  fundingDeadline: bigint;
   totalContributions: bigint;
-  totalVoteWeight: bigint;
   status: PoolStatus;
   acceptedToken: Address;
   minContribution: bigint;
+  maxContribution: bigint;
+}
+
+/**
+ * Contribution struct from ICrowdVCPool (updated - removed pitchId)
+ */
+export interface Contribution {
+  investor: Address;
+  amount: bigint;        // Gross amount (original contribution)
+  platformFee: bigint;   // Fee deducted and sent to Treasury
+  netAmount: bigint;     // Amount after platform fee
+  token: Address;
+  timestamp: bigint;
+  nftTokenId: bigint;
+  withdrawn: boolean;
 }
 
 /**
@@ -51,8 +64,11 @@ export interface PoolInfo {
  */
 export interface VoteResult {
   pitchId: `0x${string}`;
+  wallet: Address;
   voteWeight: bigint;
-  allocationPercent: number;
+  allocationPercent: bigint;
+  allocation: bigint;
+  claimed: bigint;
 }
 
 /**
@@ -60,10 +76,13 @@ export interface VoteResult {
  */
 export interface Milestone {
   description: string;
-  fundingPercent: number;
+  fundingPercent: bigint;
   completed: boolean;
-  evidenceURI: string;
   disputed: boolean;
+  deadline: bigint;
+  evidenceURI: string;
+  approvalCount: bigint;
+  approvalsNeeded: bigint;
 }
 
 /**
@@ -96,8 +115,7 @@ export interface DeployFactoryFixtureResult
 /**
  * Return type for registerUsersFixture
  */
-export interface RegisterUsersFixtureResult
-  extends DeployFactoryFixtureResult {
+export interface RegisterUsersFixtureResult extends DeployFactoryFixtureResult {
   startups: any[];
   investors: any[];
 }
@@ -105,8 +123,7 @@ export interface RegisterUsersFixtureResult
 /**
  * Return type for submitPitchesFixture
  */
-export interface SubmitPitchesFixtureResult
-  extends RegisterUsersFixtureResult {
+export interface SubmitPitchesFixtureResult extends RegisterUsersFixtureResult {
   pitchIds: `0x${string}`[];
 }
 
@@ -129,8 +146,7 @@ export interface DeployPoolFixtureResult extends SubmitPitchesFixtureResult {
 /**
  * Return type for createActivePoolFixture
  */
-export interface CreateActivePoolFixtureResult
-  extends DeployPoolFixtureResult {
+export interface CreateActivePoolFixtureResult extends DeployPoolFixtureResult {
   contributions: ContributionData[];
   votes: VoteData[];
 }

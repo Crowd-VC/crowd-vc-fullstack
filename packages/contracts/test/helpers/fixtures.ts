@@ -354,8 +354,8 @@ export async function createActivePoolFixture() {
       account: investor.account,
     });
 
-    // Contribute to pool
-    const tx = await pool.write.contribute([amount], {
+    // Contribute to pool (new signature: amount, token)
+    const tx = await pool.write.contribute([amount, usdt.address], {
       account: investor.account,
     });
 

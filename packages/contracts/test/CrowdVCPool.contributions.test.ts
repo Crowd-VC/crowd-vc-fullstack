@@ -221,7 +221,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
       // Contribute
-      const hash = await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      const hash = await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -231,7 +231,6 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       expect(logs).to.have.lengthOf(1)
       expect(logs[0].args.investor).to.equal(investor.account.address)
       expect(logs[0].args.amount).to.equal(amount)
-      expect(logs[0].args.pitchId).to.equal(pitchIds[0])
 
       // Verify NFT was minted (tokenId should be 1 for first contribution)
       const nftTokenId = logs[0].args.tokenId
@@ -251,7 +250,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -271,7 +270,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -279,7 +278,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       expect(poolInfo[5]).to.equal(amount) // totalContributions
     })
 
-    it('should automatically cast vote for contributed pitch', async function () {
+    it('should require separate vote call after contribution', async function () {
       const { pool, usdt, investors, pitchIds } = await loadFixture(deployPoolFixture)
 
       const investor = investors[0]
@@ -288,13 +287,22 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
+        account: investor.account,
+      })
+
+      // Contribution should NOT automatically cast a vote
+      const hasVotedBefore = await pool.read.hasVoted([investor.account.address, pitchIds[0]])
+      expect(hasVotedBefore).to.be.false
+
+      // Investor must vote separately
+      await pool.write.vote([pitchIds[0]], {
         account: investor.account,
       })
 
       // Check if vote was cast
-      const hasVoted = await pool.read.hasVoted([investor.account.address, pitchIds[0]])
-      expect(hasVoted).to.be.true
+      const hasVotedAfter = await pool.read.hasVoted([investor.account.address, pitchIds[0]])
+      expect(hasVotedAfter).to.be.true
 
       // Check vote weight
       const voteWeight = await pool.read.getVoteWeight([pitchIds[0]])
@@ -313,7 +321,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
       await expectRevert(
-        pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+        pool.write.contribute([amount, usdt.address], {
           account: investor.account,
         }),
         'Below minimum contribution'
@@ -331,28 +339,10 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdc.write.approve([pool.address, amount], { account: investor.account })
 
       await expectRevert(
-        pool.write.contribute([amount, usdc.address, pitchIds[0]], {
+        pool.write.contribute([amount, usdc.address], {
           account: investor.account,
         }),
         'Token not accepted'
-      )
-    })
-
-    it('should reject contribution to invalid pitch', async function () {
-      const { pool, usdt, investors } = await loadFixture(deployPoolFixture)
-
-      const investor = investors[0]
-      const amount = BigInt(1000 * 1e6)
-      const fakePitchId = '0x' + '1'.repeat(64) as `0x${string}`
-
-      await usdt.write.mint([investor.account.address, amount])
-      await usdt.write.approve([pool.address, amount], { account: investor.account })
-
-      await expectRevert(
-        pool.write.contribute([amount, usdt.address, fakePitchId], {
-          account: investor.account,
-        }),
-        'Invalid pitch'
       )
     })
 
@@ -371,7 +361,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.approve([pool.address, amount], { account: investor.account })
 
       await expectRevert(
-        pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+        pool.write.contribute([amount, usdt.address], {
           account: investor.account,
         }),
         'Voting period ended'
@@ -388,14 +378,14 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       // First contribution
       await usdt.write.mint([investor.account.address, amount1])
       await usdt.write.approve([pool.address, amount1], { account: investor.account })
-      await pool.write.contribute([amount1, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount1, usdt.address], {
         account: investor.account,
       })
 
       // Second contribution
       await usdt.write.mint([investor.account.address, amount2])
       await usdt.write.approve([pool.address, amount2], { account: investor.account })
-      await pool.write.contribute([amount2, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount2, usdt.address], {
         account: investor.account,
       })
 
@@ -416,7 +406,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -425,45 +415,35 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       ])
 
       expect(contributionData.investor).to.equal(investor.account.address)
-      expect(contributionData.pitchId).to.equal(pitchIds[0])
       expect(contributionData.amount).to.equal(amount)
       expect(contributionData.token).to.equal(usdt.address)
       expect(contributionData.withdrawn).to.be.false
     })
 
-    it('should track contributions per pitch per investor', async function () {
+    it('should track total contributions per investor', async function () {
       const { pool, usdt, investors, pitchIds } = await loadFixture(deployPoolFixture)
 
       const investor = investors[0]
       const amount1 = BigInt(1000 * 1e6)
       const amount2 = BigInt(500 * 1e6)
 
-      // Contribute to first pitch
+      // First contribution
       await usdt.write.mint([investor.account.address, amount1])
       await usdt.write.approve([pool.address, amount1], { account: investor.account })
-      await pool.write.contribute([amount1, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount1, usdt.address], {
         account: investor.account,
       })
 
-      // Contribute to second pitch
+      // Second contribution
       await usdt.write.mint([investor.account.address, amount2])
       await usdt.write.approve([pool.address, amount2], { account: investor.account })
-      await pool.write.contribute([amount2, usdt.address, pitchIds[1]], {
+      await pool.write.contribute([amount2, usdt.address], {
         account: investor.account,
       })
 
-      // Verify separate tracking
-      const contrib0 = await pool.read.contributionsPerPitch([
-        investor.account.address,
-        pitchIds[0],
-      ])
-      const contrib1 = await pool.read.contributionsPerPitch([
-        investor.account.address,
-        pitchIds[1],
-      ])
-
-      expect(contrib0).to.equal(amount1)
-      expect(contrib1).to.equal(amount2)
+      // Verify total contribution tracking
+      const totalContribution = await pool.read.getContribution([investor.account.address])
+      expect(totalContribution).to.equal(amount1 + amount2)
     })
 
     it('should handle max contribution limit correctly', async function () {
@@ -484,7 +464,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       await usdt.write.approve([pool.address, largeAmount], { account: investor.account })
 
       // Should allow since maxContribution is 0 (no limit) in our fixture pool
-      await pool.write.contribute([largeAmount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([largeAmount, usdt.address], {
         account: investor.account,
       })
 
@@ -505,7 +485,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       // Contribute
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -529,7 +509,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -550,7 +530,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -572,7 +552,12 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
+        account: investor.account,
+      })
+
+      // Vote for pitch
+      await pool.write.vote([pitchIds[0]], {
         account: investor.account,
       })
 
@@ -595,7 +580,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -625,7 +610,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -646,7 +631,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -668,7 +653,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -690,7 +675,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       // First contribution -> tokenId 1
       await usdt.write.mint([investor1.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor1.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor1.account,
       })
 
@@ -700,7 +685,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       // Second contribution -> tokenId 2
       await usdt.write.mint([investor2.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor2.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor2.account,
       })
 
@@ -718,7 +703,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor1.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor1.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor1.account,
       })
 
@@ -742,7 +727,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -768,7 +753,7 @@ describe('CrowdVCPool - Contributions and Voting', function () {
 
       await usdt.write.mint([investor.account.address, amount])
       await usdt.write.approve([pool.address, amount], { account: investor.account })
-      await pool.write.contribute([amount, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount, usdt.address], {
         account: investor.account,
       })
 
@@ -790,14 +775,14 @@ describe('CrowdVCPool - Contributions and Voting', function () {
       // First contribution
       await usdt.write.mint([investor.account.address, amount1])
       await usdt.write.approve([pool.address, amount1], { account: investor.account })
-      await pool.write.contribute([amount1, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount1, usdt.address], {
         account: investor.account,
       })
 
       // Second contribution
       await usdt.write.mint([investor.account.address, amount2])
       await usdt.write.approve([pool.address, amount2], { account: investor.account })
-      await pool.write.contribute([amount2, usdt.address, pitchIds[0]], {
+      await pool.write.contribute([amount2, usdt.address], {
         account: investor.account,
       })
 

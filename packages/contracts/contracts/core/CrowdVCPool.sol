@@ -68,10 +68,13 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     error NoAcceptedToken();
     error PoolNotFailed();
     error AlreadyRefunded();
+    error MaxVotesExceeded(uint256 current, uint256 max);
+    error NotVotedForAnyPitch();
 
     // Constants
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 private constant MAX_WINNERS = 3;
+    uint256 private constant MAX_VOTES_PER_INVESTOR = 3; // Max pitches an investor can vote for
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 1000; // 10%
     uint256 private constant BASIS_POINTS = 10000;
 
@@ -83,7 +86,6 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     string public category;
     uint256 public fundingGoal;
     uint256 public votingDeadline;
-    uint256 public fundingDeadline;
     uint256 public minContribution;
     uint256 public maxContribution; // 0 = no limit
     address[] public acceptedTokens; // Multiple tokens supported
@@ -95,8 +97,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
     // Pool state
     PoolStatus public status;
-    uint256 public totalContributions;
-    uint256 public totalPenalties; // Penalties from early withdrawals
+    uint256 public totalContributions; // Tracks netAmount after platform fees (actual pool funds)
     uint256 private _nextTokenId;
 
     // Candidate pitches
@@ -111,12 +112,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     mapping(uint256 => address) public tokenIdToInvestor;
     mapping(uint256 => uint256) public tokenIdToAmount;
     mapping(address => uint256[]) public investorTokenIds;
-    uint256 public totalPlatformFees; // Track fees separately for refund logic
 
-    // Voting - auto-vote on contribution
-    mapping(address => bytes32) public currentVote; // investor => pitchId they voted for
-    mapping(address => mapping(bytes32 => bool)) public hasVoted;
-    mapping(bytes32 => uint256) public voteWeights;
+    // Voting - multi-vote support (up to MAX_VOTES_PER_INVESTOR pitches)
+    mapping(address => bytes32[]) private _investorVotes; // investor => array of pitchIds voted for
+    mapping(address => mapping(bytes32 => bool)) public hasVotedFor; // investor => pitchId => hasVoted
+    mapping(address => mapping(bytes32 => uint256)) public voteWeightPerPitch; // investor => pitchId => weight
+    mapping(bytes32 => uint256) public voteWeights; // pitchId => total vote weight
 
     // Winners
     VoteResult[] private _winners;
@@ -175,7 +176,6 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         category = _config.category;
         fundingGoal = _config.fundingGoal;
         votingDeadline = block.timestamp + _config.votingDuration;
-        fundingDeadline = block.timestamp + _config.fundingDuration;
         
         // Set up accepted tokens (support single token for now, can add more later)
         acceptedTokens.push(_config.acceptedToken);
@@ -202,12 +202,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Contribute tokens to the pool and receive NFT receipt
+     * @notice Contribution and voting are separate actions. Call vote() to allocate your vote weight.
      * @param amount Amount of tokens to contribute
      * @param token Token address to contribute (must be in acceptedTokens)
-     * @param pitchId ID of the pitch to support (automatically casts vote)
      * @return tokenId NFT token ID representing the contribution
      */
-    function contribute(uint256 amount, address token, bytes32 pitchId)
+    function contribute(uint256 amount, address token)
         external
         override
         nonReentrant
@@ -220,55 +220,51 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
             revert AboveMaxContribution(amount, maxContribution);
         }
         if (!isAcceptedToken[token]) revert TokenNotAccepted(token);
-        if (!isCandidatePitch[pitchId]) revert InvalidPitch(pitchId);
 
         // Calculate platform fee
         uint256 platformFee = FeeCalculator.calculatePlatformFee(amount, platformFeePercent);
         uint256 netAmount = amount - platformFee;
 
-        // Transfer tokens from contributor
+        // Transfer tokens from contributor (full amount including fee)
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
-        // Update contribution state
-        contributions[msg.sender] += amount;
-        contributionsPerPitch[msg.sender][pitchId] += amount;
-        totalContributions += amount;
-        totalPlatformFees += platformFee;
+        // Transfer platform fee to Treasury immediately
+        if (platformFee > 0) {
+            IERC20(token).safeTransfer(treasury, platformFee);
+            emit PlatformFeeTransferred(token, platformFee, block.timestamp);
+        }
+
+        // Update contribution state (track netAmount for pool accounting)
+        contributions[msg.sender] += netAmount;
+        totalContributions += netAmount;
+        tokenId = _nextTokenId++;
 
         // Store detailed contribution data
         contributionData[msg.sender] = ICrowdVCPool.Contribution({
             investor: msg.sender,
-            pitchId: pitchId,
-            amount: amount,
+            amount: amount,          // Gross amount for records
             platformFee: platformFee,
-            netAmount: netAmount,
+            netAmount: netAmount,    // Net amount for penalty calculation
             token: token,
             timestamp: block.timestamp,
-            nftTokenId: _nextTokenId,
+            nftTokenId: tokenId,
             withdrawn: false
         });
 
         // Mint NFT receipt
-        tokenId = _nextTokenId++;
         _safeMint(msg.sender, tokenId);
 
         tokenIdToInvestor[tokenId] = msg.sender;
-        tokenIdToAmount[tokenId] = amount;
+        tokenIdToAmount[tokenId] = netAmount; // Store netAmount for NFT tracking
         investorTokenIds[msg.sender].push(tokenId);
 
-        // Automatically cast vote for the pitch (contribution = vote)
-        if (!hasVoted[msg.sender][pitchId]) {
-            hasVoted[msg.sender][pitchId] = true;
-            currentVote[msg.sender] = pitchId;
-        }
-        voteWeights[pitchId] += amount;
-
-        emit ContributionMade(msg.sender, pitchId, amount, platformFee, token, tokenId, block.timestamp);
+        emit ContributionMade(msg.sender, amount, platformFee, token, tokenId, block.timestamp);
         return tokenId;
     }
 
     /**
      * @dev Withdraw contribution early with penalty (before voting ends)
+     * @notice Penalty is calculated on netAmount (after platform fee), then transferred to Treasury
      */
     function withdrawEarly() external override nonReentrant {
         if (status != PoolStatus.Active) revert PoolNotActive();
@@ -278,26 +274,44 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         ICrowdVCPool.Contribution storage contrib = contributionData[msg.sender];
         if (contrib.withdrawn) revert AlreadyWithdrawn();
 
-        uint256 contribution = contributions[msg.sender];
-        bytes32 pitchId = contrib.pitchId;
+        uint256 netAmount = contrib.netAmount; // Use netAmount for penalty calculation
         address token = contrib.token;
-        
+
+        // Clear contribution state
         contributions[msg.sender] = 0;
-        totalContributions -= contribution;
+        totalContributions -= netAmount;
         contrib.withdrawn = true;
 
+        // Calculate penalty on netAmount (after platform fee was already sent to Treasury)
         (uint256 penalty, uint256 refund) = FeeCalculator.calculateEarlyWithdrawalPenalty(
-            contribution,
+            netAmount,
             EARLY_WITHDRAWAL_PENALTY
         );
 
-        totalPenalties += penalty;
+        // Clear all votes and their weights
+        bytes32[] storage investorVotes = _investorVotes[msg.sender];
+        uint256 numVotes = investorVotes.length;
 
-        // Remove vote weight
-        if (hasVoted[msg.sender][pitchId]) {
-            voteWeights[pitchId] -= contribution;
-            hasVoted[msg.sender][pitchId] = false;
-            currentVote[msg.sender] = bytes32(0);
+        for (uint256 i = 0; i < numVotes; i++) {
+            bytes32 pitchId = investorVotes[i];
+            uint256 weight = voteWeightPerPitch[msg.sender][pitchId];
+
+            // Remove vote weight from pitch
+            if (weight > 0) {
+                voteWeights[pitchId] -= weight;
+                voteWeightPerPitch[msg.sender][pitchId] = 0;
+            }
+
+            // Clear voting flags
+            hasVotedFor[msg.sender][pitchId] = false;
+            contributionsPerPitch[msg.sender][pitchId] = 0;
+        }
+
+        // Clear investor votes array
+        delete _investorVotes[msg.sender];
+
+        if (numVotes > 0) {
+            emit VotesCleared(msg.sender, numVotes, block.timestamp);
         }
 
         // Burn all NFTs of this investor
@@ -309,16 +323,23 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         }
         delete investorTokenIds[msg.sender];
 
-        // Transfer refund
+        // Transfer penalty to Treasury
+        if (penalty > 0) {
+            IERC20(token).safeTransfer(treasury, penalty);
+            emit PenaltyTransferred(msg.sender, token, penalty, block.timestamp);
+        }
+
+        // Transfer refund to user
         IERC20(token).safeTransfer(msg.sender, refund);
 
-        emit EarlyWithdrawal(msg.sender, contribution, penalty, refund);
+        emit EarlyWithdrawal(msg.sender, netAmount, penalty, refund);
     }
 
     // ============ VOTING FUNCTIONS ============
 
     /**
-     * @dev Vote for a pitch (vote weight = contribution amount)
+     * @dev Vote for a pitch (up to MAX_VOTES_PER_INVESTOR pitches)
+     * @notice Vote weight is equally distributed among all voted pitches
      * @param pitchId ID of the pitch to vote for
      */
     function vote(bytes32 pitchId) external override {
@@ -326,66 +347,104 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
         if (contributions[msg.sender] == 0) revert NoContribution();
         if (!isCandidatePitch[pitchId]) revert InvalidPitch(pitchId);
-        if (hasVoted[msg.sender][pitchId]) revert AlreadyVotedForPitch(pitchId);
+        if (hasVotedFor[msg.sender][pitchId]) revert AlreadyVotedForPitch(pitchId);
 
-        uint256 weight = contributions[msg.sender];
-        hasVoted[msg.sender][pitchId] = true;
-        voteWeights[pitchId] += weight;
+        uint256 currentVoteCount = _investorVotes[msg.sender].length;
+        if (currentVoteCount >= MAX_VOTES_PER_INVESTOR) {
+            revert MaxVotesExceeded(currentVoteCount, MAX_VOTES_PER_INVESTOR);
+        }
+
+        // Add new vote
+        _investorVotes[msg.sender].push(pitchId);
+        hasVotedFor[msg.sender][pitchId] = true;
+
+        // Recalculate vote weights for all voted pitches (equal distribution)
+        _redistributeVoteWeights(msg.sender);
+
+        // Get the weight assigned to this new pitch
+        uint256 weight = voteWeightPerPitch[msg.sender][pitchId];
+
+        // Track contribution per pitch for milestone approval
+        contributionsPerPitch[msg.sender][pitchId] = weight;
 
         emit VoteCast(msg.sender, pitchId, weight, block.timestamp);
     }
 
     /**
-     * @dev Change vote to a different pitch (only allowed BEFORE contributing)
+     * @dev Change a vote from one pitch to another
+     * @param oldPitchId Current pitch voted for (must have voted for this)
      * @param newPitchId New pitch to vote for
-     * @notice Once you contribute, your vote is locked to the pitch you contributed to
      */
-    function changeVote(bytes32 newPitchId) external override {
+    function changeVote(bytes32 oldPitchId, bytes32 newPitchId) external override {
         if (status != PoolStatus.Active) revert PoolNotActive();
         if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
-        if (contributions[msg.sender] != 0) revert AlreadyContributed();
+        if (contributions[msg.sender] == 0) revert NoContribution();
         if (!isCandidatePitch[newPitchId]) revert InvalidPitch(newPitchId);
-
-        bytes32 oldPitchId = currentVote[msg.sender];
-        if (oldPitchId == bytes32(0)) revert NoExistingVote();
+        if (!hasVotedFor[msg.sender][oldPitchId]) revert NotVotedForPitch(oldPitchId);
+        if (hasVotedFor[msg.sender][newPitchId]) revert AlreadyVotedForPitch(newPitchId);
         if (oldPitchId == newPitchId) revert SamePitchVote();
 
-        // Remove vote from old pitch
-        hasVoted[msg.sender][oldPitchId] = false;
+        // Remove old vote weight
+        uint256 oldWeight = voteWeightPerPitch[msg.sender][oldPitchId];
+        voteWeights[oldPitchId] -= oldWeight;
+        voteWeightPerPitch[msg.sender][oldPitchId] = 0;
+        hasVotedFor[msg.sender][oldPitchId] = false;
+        contributionsPerPitch[msg.sender][oldPitchId] = 0;
 
-        // Add vote to new pitch
-        hasVoted[msg.sender][newPitchId] = true;
-        currentVote[msg.sender] = newPitchId;
+        // Update the _investorVotes array: replace oldPitchId with newPitchId
+        bytes32[] storage votes = _investorVotes[msg.sender];
+        for (uint256 i = 0; i < votes.length; i++) {
+            if (votes[i] == oldPitchId) {
+                votes[i] = newPitchId;
+                break;
+            }
+        }
+
+        // Add new vote
+        hasVotedFor[msg.sender][newPitchId] = true;
+
+        // No need to redistribute - just assign the same weight to the new pitch
+        voteWeightPerPitch[msg.sender][newPitchId] = oldWeight;
+        voteWeights[newPitchId] += oldWeight;
+        contributionsPerPitch[msg.sender][newPitchId] = oldWeight;
 
         emit VoteChanged(msg.sender, oldPitchId, newPitchId);
     }
-    
+
     /**
-     * @dev Legacy changeVote function for backward compatibility
-     * @param oldPitchId Current pitch voted for
-     * @param newPitchId New pitch to vote for
+     * @dev Internal function to redistribute vote weights equally among all voted pitches
+     * @param investor Address of the investor whose votes to redistribute
      */
-    function changeVote(bytes32 oldPitchId, bytes32 newPitchId) external {
-        if (status != PoolStatus.Active) revert PoolNotActive();
-        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
-        if (contributions[msg.sender] != 0) revert AlreadyContributed();
-        if (!isCandidatePitch[newPitchId]) revert InvalidPitch(newPitchId);
-        if (!hasVoted[msg.sender][oldPitchId]) revert NotVotedForPitch(oldPitchId);
-        if (hasVoted[msg.sender][newPitchId]) revert AlreadyVotedForPitch(newPitchId);
+    function _redistributeVoteWeights(address investor) private {
+        bytes32[] storage votes = _investorVotes[investor];
+        uint256 voteCount = votes.length;
+        if (voteCount == 0) return;
 
-        // Remove vote from old pitch
-        hasVoted[msg.sender][oldPitchId] = false;
+        uint256 totalContribution = contributions[investor];
+        uint256 weightPerPitch = totalContribution / voteCount;
 
-        // Add vote to new pitch
-        hasVoted[msg.sender][newPitchId] = true;
-        currentVote[msg.sender] = newPitchId;
+        // First, remove old weights from all pitches
+        for (uint256 i = 0; i < voteCount; i++) {
+            bytes32 pitchId = votes[i];
+            uint256 oldWeight = voteWeightPerPitch[investor][pitchId];
+            if (oldWeight > 0) {
+                voteWeights[pitchId] -= oldWeight;
+            }
+        }
 
-        emit VoteChanged(msg.sender, oldPitchId, newPitchId);
+        // Then, add new equal weights
+        for (uint256 i = 0; i < voteCount; i++) {
+            bytes32 pitchId = votes[i];
+            voteWeightPerPitch[investor][pitchId] = weightPerPitch;
+            voteWeights[pitchId] += weightPerPitch;
+            contributionsPerPitch[investor][pitchId] = weightPerPitch;
+        }
     }
 
     /**
      * @dev End voting period and determine winners (admin only)
      * @notice Selects top 3 pitches, handles ties by including all tied pitches
+     * @notice Platform fees and penalties were already transferred to Treasury during contribute/withdraw
      */
     function endVoting() external override onlyRole(ADMIN_ROLE) {
         if (status != PoolStatus.Active) revert PoolNotActive();
@@ -419,19 +478,14 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
             status = PoolStatus.Funded;
 
-            // Platform fees were already deducted during contributions (stored in totalPlatformFees)
-            // Calculate total distributable amount: original contributions - already collected fees + penalties
-            uint256 netAmount = totalContributions - totalPlatformFees + totalPenalties;
-
-            // Transfer accumulated platform fees to treasury (use first accepted token for now)
-            address token = acceptedTokens.length > 0 ? acceptedTokens[0] : address(0);
-            if (totalPlatformFees > 0 && token != address(0)) {
-                IERC20(token).safeTransfer(treasury, totalPlatformFees);
-            }
+            // totalContributions already reflects net funds (after platform fees sent to Treasury)
+            // Penalties from early withdrawals were also sent directly to Treasury
+            // So totalContributions is the actual pool balance available for distribution
+            uint256 distributableAmount = totalContributions;
 
             // Calculate allocations for each winner
             for (uint256 i = 0; i < _winners.length; i++) {
-                uint256 allocation = (netAmount * _winners[i].allocationPercent) / BASIS_POINTS;
+                uint256 allocation = (distributableAmount * _winners[i].allocationPercent) / BASIS_POINTS;
                 totalAllocated[_winners[i].pitchId] = allocation;
                 _winners[i].allocation = allocation;
             }
@@ -731,7 +785,8 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Request refund if pool failed to meet goal
-     * @notice Returns the FULL original amount including platform fee (fair refund)
+     * @notice Returns the netAmount (after platform fee) since fees were already sent to Treasury
+     * @notice Platform fees are NOT refunded - they were transferred to Treasury at contribution time
      */
     function requestRefund() external override nonReentrant {
         if (status != PoolStatus.Failed) revert PoolNotFailed();
@@ -739,15 +794,16 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         if (hasRefunded[msg.sender]) revert AlreadyRefunded();
 
         ICrowdVCPool.Contribution storage contrib = contributionData[msg.sender];
-        
-        // Refund the full gross amount (before platform fee was deducted)
-        uint256 refundAmount = contrib.amount;
+
+        // Refund the netAmount (what's in the pool after platform fee was sent to Treasury)
+        uint256 refundAmount = contrib.netAmount;
         address token = contrib.token;
-        
+
         hasRefunded[msg.sender] = true;
         contrib.withdrawn = true;
+        contributions[msg.sender] = 0;
 
-        // Transfer full refund including platform fee
+        // Transfer refund (netAmount only - platform fee was already sent to Treasury)
         IERC20(token).safeTransfer(msg.sender, refundAmount);
 
         emit Refunded(msg.sender, refundAmount);
@@ -761,7 +817,6 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
             category: category,
             fundingGoal: fundingGoal,
             votingDeadline: votingDeadline,
-            fundingDeadline: fundingDeadline,
             totalContributions: totalContributions,
             status: status,
             acceptedToken: acceptedTokens.length > 0 ? acceptedTokens[0] : address(0),
@@ -800,6 +855,52 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
     function getInvestorTokenIds(address investor) external view returns (uint256[] memory) {
         return investorTokenIds[investor];
+    }
+
+    /**
+     * @dev Check if an investor has voted for a specific pitch
+     * @param voter Address of the investor
+     * @param pitchId ID of the pitch
+     * @return True if the investor has voted for this pitch
+     */
+    function hasVoted(address voter, bytes32 pitchId) external view override returns (bool) {
+        return hasVotedFor[voter][pitchId];
+    }
+
+    /**
+     * @dev Get all pitches an investor has voted for
+     * @param investor Address of the investor
+     * @return Array of pitch IDs the investor has voted for
+     */
+    function getInvestorVotes(address investor) external view override returns (bytes32[] memory) {
+        return _investorVotes[investor];
+    }
+
+    /**
+     * @dev Get the number of pitches an investor has voted for
+     * @param investor Address of the investor
+     * @return Number of votes cast
+     */
+    function getInvestorVoteCount(address investor) external view override returns (uint256) {
+        return _investorVotes[investor].length;
+    }
+
+    /**
+     * @dev Get the maximum number of pitches an investor can vote for
+     * @return Maximum votes per investor
+     */
+    function getMaxVotesPerInvestor() external pure override returns (uint256) {
+        return MAX_VOTES_PER_INVESTOR;
+    }
+
+    /**
+     * @dev Get the vote weight an investor has allocated to a specific pitch
+     * @param investor Address of the investor
+     * @param pitchId ID of the pitch
+     * @return Weight allocated to this pitch
+     */
+    function getInvestorVoteWeightForPitch(address investor, bytes32 pitchId) external view returns (uint256) {
+        return voteWeightPerPitch[investor][pitchId];
     }
 
     // ============ OVERRIDES ============

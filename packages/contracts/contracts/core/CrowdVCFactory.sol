@@ -304,6 +304,7 @@ contract CrowdVCFactory is
             acceptedToken: params.acceptedToken,
             minContribution: params.minContribution,
             maxContribution: params.maxContribution,
+            pitchAddDuration: 0, // Pitch submission deadline not implemented yet
             platformFeePercent: platformFeePercent,
             treasury: treasury
         });
