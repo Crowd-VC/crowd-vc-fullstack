@@ -13,13 +13,16 @@ This is a Turborepo monorepo with the following structure:
 ```
 crowd-vc-fullstack/
 ├── apps/
-│   ├── web/              # Next.js 15 application (@crowd-vc/web)
-├── packages/             # Shared packages (future)
-│   └── contracts/        # Hardhat smart contracts (@crowd-vc/contracts)
+│   └── web/              # Next.js 15 application (@crowd-vc/web)
+├── packages/
+│   ├── contracts/        # Hardhat smart contracts (@crowd-vc/contracts)
+│   └── abis/             # Contract ABIs (@crowd-vc/abis)
 ├── pnpm-workspace.yaml   # PNPM workspace configuration
 ├── turbo.json            # Turborepo configuration
 └── package.json          # Root package.json with workspace scripts
 ```
+
+**Important**: The contracts are in `packages/contracts/`,
 
 ## Development Commands
 
@@ -49,13 +52,18 @@ pnpm db:seed              # Seed database with test data
 ### Smart Contract Commands (from root)
 
 ```bash
-pnpm contracts:compile    # Compile Solidity contracts
-pnpm contracts:test       # Run Hardhat tests
-pnpm contracts:deploy     # Deploy contracts to configured network
-pnpm contracts:deploy:base # Deploy to BASE network
+# Primary commands (run from root)
+pnpm hardhat:build        # Compile Solidity contracts
+pnpm hardhat:test         # Run Hardhat tests
+pnpm hardhat:node         # Start local Hardhat node
+pnpm hardhat:clean        # Clean artifacts and cache
+pnpm hardhat:verify       # Verify contracts on Basescan
+pnpm generate:addresses   # Generate contract address TypeScript files
+pnpm ignition:deploy      # Deploy using Hardhat Ignition to BASE
+pnpm ignition:upgrade     # Upgrade factory contract via Ignition
 ```
 
-### Working in Individual Apps
+### Working in Individual Packages
 
 ```bash
 # For web app
@@ -63,9 +71,13 @@ cd apps/web
 pnpm dev                  # Run Next.js dev server
 
 # For contracts
-cd apps/contracts
+cd packages/contracts
 pnpm compile              # Compile contracts
 pnpm test                 # Run tests
+pnpm deploy:baseSepolia   # Deploy to BASE Sepolia with mock tokens
+pnpm deploy:baseMainnet   # Deploy to BASE mainnet
+pnpm deploy:baseMainnet:verify  # Deploy and verify on BASE mainnet
+pnpm full-deploy          # Clean compile and deploy
 ```
 
 ## Required Environment Variables
@@ -83,9 +95,9 @@ NEXT_PUBLIC_REST_API_ENDPOINT=       # External API endpoint (optional)
 
 **Critical**: `NEXT_PUBLIC_CRYPTO_PROJECT_ID` is mandatory. Get it from [Reown Docs](https://docs.reown.com/appkit/next/core/installation).
 
-### Smart Contracts (`apps/contracts/.env`)
+### Smart Contracts (`packages/contracts/.env`)
 
-Create `.env` in `apps/contracts/`:
+Create `.env` in `packages/contracts/`:
 
 ```bash
 PRIVATE_KEY=                         # Deployer wallet private key
@@ -112,14 +124,14 @@ PLATFORM_FEE_PERCENT=500             # Platform fee in basis points (500 = 5%)
 - **Styling**: Tailwind CSS + Radix UI components
 - **Forms**: React Hook Form + Zod validation
 
-**Smart Contracts (`apps/contracts`)**:
+**Smart Contracts (`packages/contracts`)**:
 
 - **Framework**: Hardhat 3.0
 - **Language**: Solidity 0.8.28
 - **Libraries**: OpenZeppelin Contracts v5.4 (standard + upgradeable)
-- **Testing**: Viem + Chai
+- **Testing**: Viem + Chai + node:test (via hardhat-node-test-runner)
 - **Target Chain**: BASE (mainnet and Sepolia testnet)
-- **Compiler**: Uses viaIR for complex contracts
+- **Compiler**: Uses viaIR for complex contracts, optimizer runs=1
 
 ### Web App Structure (`apps/web/src/`)
 
@@ -148,7 +160,7 @@ src/
 └── assets/                       # Static assets (images, fonts, css)
 ```
 
-### Smart Contracts Structure (`apps/contracts/`)
+### Smart Contracts Structure (`packages/contracts/`)
 
 ```
 contracts/
@@ -160,13 +172,22 @@ contracts/
 │   └── ValidationLib.sol        # Input validation helpers
 ├── core/                         # Core contracts
 │   ├── CrowdVCFactory.sol       # Main upgradeable factory (UUPS)
-│   └── CrowdVCPool.sol          # Pool contract with NFT receipts
+│   ├── CrowdVCPool.sol          # Pool contract with NFT receipts
+│   └── CrowdVCTreasury.sol      # Treasury contract containing platform fees and penalties
 └── mocks/                        # Test contracts
     ├── MockUSDT.sol             # Test USDT token
     └── MockUSDC.sol             # Test USDC token
 
 scripts/                          # Deployment scripts
-test/hardhat/                     # Contract tests
+test/                             # Contract tests (using node:test)
+├── helpers/                      # Test utilities and fixtures
+│   ├── fixtures.ts              # Deployment fixtures
+│   ├── constants.ts             # Test constants
+│   └── utils.ts                 # Test helpers
+├── CrowdVCFactory.deployment.test.ts
+├── CrowdVCFactory.users.test.ts
+├── CrowdVCFactory.pitches.test.ts
+└── CrowdVCFactory.pools.test.ts
 ```
 
 ### Database Schema
@@ -202,7 +223,7 @@ All schemas are in `src/db/schema/` and exported from `src/db/schema/index.ts`.
 
 **Wagmi Config:**
 
-- Located in `src/app/shared/wagmi-config.tsx`
+- Located in `src/app/config/wagmi-config.tsx`
 - Project metadata defined for wallet display
 - Network configurations for supported chains
 
@@ -266,15 +287,13 @@ All API routes follow REST conventions in `src/app/api/`:
 
 **Core Contracts:**
 
-1. **CrowdVCFactory.sol** (`apps/contracts/contracts/core/`)
-   - Upgradeable via UUPS (Universal Upgradeable Proxy Standard)
-   - User registration with role-based access (Startup, Investor, Admin)
+1. **CrowdVCFactory.sol** (`packages/contracts/contracts/core/`)
    - Pitch submission and approval workflow
    - Factory pattern: deploys new CrowdVCPool contracts
    - Platform configuration (fees, supported tokens, treasury)
    - OpenZeppelin AccessControl for permissions
 
-2. **CrowdVCPool.sol** (`apps/contracts/contracts/core/`)
+2. **CrowdVCPool.sol** (`packages/contracts/contracts/core/`)
    - Individual pool contract (one per investment pool)
    - ERC721 for NFT receipts issued to investors
    - USDT/USDC contribution handling with SafeERC20
@@ -287,15 +306,15 @@ All API routes follow REST conventions in `src/app/api/`:
 
 **Supporting Contracts:**
 
-- **Libraries** (`apps/contracts/contracts/libraries/`)
+- **Libraries** (`packages/contracts/contracts/libraries/`)
   - `FeeCalculator.sol`: Fee calculations, proportional distributions
   - `ValidationLib.sol`: Input validation helpers
 
-- **Interfaces** (`apps/contracts/contracts/interfaces/`)
+- **Interfaces** (`packages/contracts/contracts/interfaces/`)
   - `ICrowdVCFactory.sol`: Factory interface
   - `ICrowdVCPool.sol`: Pool interface
 
-- **Mocks** (`apps/contracts/contracts/mocks/`)
+- **Mocks** (`packages/contracts/contracts/mocks/`)
   - `MockUSDT.sol`: Test USDT token (6 decimals)
   - `MockUSDC.sol`: Test USDC token (6 decimals)
 
@@ -321,13 +340,21 @@ All API routes follow REST conventions in `src/app/api/`:
 
 ### Working with Smart Contracts
 
+**Testing Framework:**
+
+- Uses Hardhat 3.0 with node:test runner (NOT Mocha)
+- Test framework: `node:test` via `@nomicfoundation/hardhat-node-test-runner`
+- Assertions: Viem + Chai via `@nomicfoundation/hardhat-viem-assertions`
+- Test organization: Fixtures using `loadFixture` for snapshot-based isolation
+- Test helpers in `test/helpers/`: `fixtures.ts`, `constants.ts`, `utils.ts`
+
 **Compilation:**
 
 ```bash
 # From root
-pnpm contracts:compile
+pnpm hardhat:build
 
-# From apps/contracts
+# From packages/contracts
 pnpm compile
 ```
 
@@ -335,25 +362,28 @@ pnpm compile
 
 ```bash
 # Run all tests
-pnpm contracts:test
+pnpm hardhat:test
 
-# Run specific test
-cd apps/contracts
-npx hardhat test test/hardhat/CrowdVCFactory.test.ts
+# Run specific test file
+cd packages/contracts
+npx hardhat test test/CrowdVCFactory.deployment.test.ts
+
+# Run with gas reporting
+REPORT_GAS=true pnpm hardhat:test
 ```
 
 **Deployment:**
 
-1. Configure network in `apps/contracts/hardhat.config.ts`
-2. Set environment variables in `apps/contracts/.env`
-3. Create deployment script in `apps/contracts/scripts/deploy.ts`
-4. Run: `pnpm contracts:deploy:base` or `cd apps/contracts && npx hardhat run scripts/deploy.ts --network base`
+1. Configure network in `packages/contracts/hardhat.config.ts`
+2. Set environment variables in `packages/contracts/.env`
+3. Use deployment scripts in `packages/contracts/scripts/`
+4. Run: `pnpm ignition:deploy` (from root) or deployment scripts directly
 
 **Contract Interaction:**
 
 - Use Viem in Next.js app for contract calls
-- Import contract ABIs from `apps/contracts/artifacts/`
-- See SMART_CONTRACT_PLAN.md for detailed architecture
+- Import contract ABIs from `packages/abis/`
+- ABIs are auto-generated from compiled contracts
 
 ### Monorepo Patterns
 
@@ -370,13 +400,15 @@ npx hardhat test test/hardhat/CrowdVCFactory.test.ts
 - Defined in `turbo.json`
 - Use `dependsOn` to ensure tasks run in order
 - Example: `test` depends on `compile` for contracts
+- Database tasks (`db:generate`, `db:migrate`, etc.) have `cache: false`
 
 **Important Monorepo Rules:**
 
 - Always run `pnpm install` from root
-- Use workspace commands from root: `pnpm web:dev`, `pnpm contracts:compile`
-- Each app has its own `package.json`, `tsconfig.json`, and `.env` file
+- Use workspace commands from root: `pnpm web:dev`, `pnpm hardhat:test`
+- Each app/package has its own `package.json`, `tsconfig.json`, and `.env` file
 - Shared dependencies go in root `package.json` as devDependencies
+- Contracts are in `packages/contracts/`, NOT `apps/contracts/`
 
 ### Adding New Database Tables (Web App)
 
@@ -453,34 +485,10 @@ When updating pitch status, create corresponding entries in `pitch_actions` tabl
 - Currently supports Ethereum Mainnet and Arbitrum
 - Add networks in `src/app/shared/wagmi-config.tsx` and wallet provider
 
-## Common Workflows
+### Hardhat Configuration
 
-### Testing a Feature Locally
-
-1. Ensure database is running and migrations applied
-2. Start dev server: `pnpm dev`
-3. Open Drizzle Studio in another terminal: `pnpm db:studio`
-4. Connect wallet on localhost:3000
-5. Test API endpoints with browser DevTools Network tab
-
-### Debugging Database Issues
-
-1. Check connection: Verify `DATABASE_URL` in `.env.local`
-2. Inspect schema: Run `pnpm db:studio`
-3. Check migrations: Review files in `src/db/migrations/`
-4. Reset data: Use `pnpm db:truncate-votes` or similar scripts
-5. Reseed: Run `pnpm db:seed` for test data
-
-### Adding a New Pool
-
-1. Use admin dashboard at `/dashboard/admin/pools`
-2. OR POST to `/api/admin/pools` with pool details
-3. Link startups with `/api/admin/pools/[id]/startups`
-4. Pool must have `votingDeadline` and `fundingGoal` set
-
-## Dependencies Notes
-
-- **pnpm required** - This project uses pnpm, not npm or yarn
-- Node.js 20.16 or later required
-- React 19.0.0 (latest) - Check compatibility with libraries
-- Next.js 15.5.4 with Turbo mode enabled for dev server
+- Uses Hardhat 3.0 with EDR (Ethereum Development Runtime)
+- Network type: `edr-simulated` for local testing
+- Test runner: node:test (NOT Mocha)
+- Compiler: viaIR enabled, optimizer runs=1
+- allowUnlimitedContractSize: true for development

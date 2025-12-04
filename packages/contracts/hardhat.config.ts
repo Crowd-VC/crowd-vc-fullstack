@@ -1,17 +1,24 @@
-import hardhatToolboxViemPlugin from '@nomicfoundation/hardhat-toolbox-viem';
-import hardhatIgnitionViemPlugin from '@nomicfoundation/hardhat-ignition-viem';
-import hardhatVerifyPlugin from '@nomicfoundation/hardhat-verify';
-import { configVariable, defineConfig } from 'hardhat/config';
-import { sepolia } from 'viem/chains';
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatIgnitionViemPlugin from "@nomicfoundation/hardhat-ignition-viem";
+import hardhatVerifyPlugin from "@nomicfoundation/hardhat-verify";
+import { defineConfig } from "hardhat/config";
+import hardhatViem from "@nomicfoundation/hardhat-viem";
+import hardhatViemAssertions from "@nomicfoundation/hardhat-viem-assertions";
+import hardhatNodeTestRunner from "@nomicfoundation/hardhat-node-test-runner";
+import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
 
 export default defineConfig({
   plugins: [
     hardhatToolboxViemPlugin,
     hardhatIgnitionViemPlugin,
     hardhatVerifyPlugin,
+    hardhatViem,
+    hardhatViemAssertions,
+    hardhatNodeTestRunner,
+    hardhatNetworkHelpers,
   ],
   solidity: {
-    version: '0.8.28',
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
@@ -22,32 +29,31 @@ export default defineConfig({
   },
   verify: {
     etherscan: {
-      apiKey: 'XJV78W6TGZVH8BMWT5AMQ542TXX2H46H8S',
+      apiKey: "XJV78W6TGZVH8BMWT5AMQ542TXX2H46H8S",
     },
   },
   networks: {
     hardhat: {
-      type: 'edr-simulated',
-      chainType: 'l1',
+      type: "edr-simulated",
+      chainType: "l1",
       chainId: 31337,
       allowUnlimitedContractSize: true,
     },
     hardhatMainnet: {
-      type: 'edr-simulated',
-      chainType: 'l1',
+      type: "edr-simulated",
+      chainType: "l1",
     },
     hardhatOp: {
-      type: 'edr-simulated',
-      chainType: 'op',
+      type: "edr-simulated",
+      chainType: "op",
     },
     sepolia: {
-      type: 'http',
-      chainType: 'l1',
-      url:
-        process.env.SEPOLIA_RPC_URL ||
-        'https://ethereum-sepolia-rpc.publicnode.com',
+      type: "http",
+      chainType: "l1",
+      url: process.env.SEPOLIA_RPC_URL ||
+        "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: [
-        '0x599ddb68419a278cdb069223cf4af3dd7eea30c20c0fd60d402df6c7dd4502a5',
+        "0x599ddb68419a278cdb069223cf4af3dd7eea30c20c0fd60d402df6c7dd4502a5",
       ],
     },
   },
