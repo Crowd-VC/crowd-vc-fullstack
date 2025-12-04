@@ -20,6 +20,55 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FeeCalculator for uint256;
 
+    // ============ CUSTOM ERRORS ============
+    error AlreadyInitialized();
+    error OnlyFactory();
+    error InvalidMaxContribution(uint256 maxContribution, uint256 minContribution);
+    error InvalidFundingGoal();
+    error InvalidDurations();
+    error NoCandidatePitches();
+    error InvalidToken();
+    error InvalidTreasury();
+    error FeeTooHigh(uint256 provided, uint256 maximum);
+    error PoolNotActive();
+    error VotingPeriodEnded();
+    error VotingPeriodNotEnded();
+    error BelowMinContribution(uint256 provided, uint256 minimum);
+    error AboveMaxContribution(uint256 provided, uint256 maximum);
+    error TokenNotAccepted(address token);
+    error InvalidPitch(bytes32 pitchId);
+    error NoContribution();
+    error AlreadyWithdrawn();
+    error AlreadyVotedForPitch(bytes32 pitchId);
+    error AlreadyContributed();
+    error NoExistingVote();
+    error SamePitchVote();
+    error NotVotedForPitch(bytes32 pitchId);
+    error NotAWinner(bytes32 pitchId);
+    error DidNotContributeToThisPitch(bytes32 pitchId);
+    error InvalidMilestoneIndex(uint256 index);
+    error AlreadyApprovedMilestone();
+    error MilestoneNotCompleted();
+    error MilestoneDisputed();
+    error PitchAlreadyAdded(bytes32 pitchId);
+    error InvalidWallet();
+    error PitchNotInPool(bytes32 pitchId);
+    error PitchHasVotes(bytes32 pitchId, uint256 votes);
+    error PoolAlreadyActiveOrClosed();
+    error MilestonesAlreadySet();
+    error NoMilestones();
+    error InvalidMilestonePercentage();
+    error MilestonePercentageMismatch(uint256 total);
+    error NotPitchOwner(address caller, address owner);
+    error AlreadyCompleted();
+    error PoolNotFunded();
+    error InsufficientApprovals(uint256 current, uint256 required);
+    error ExceedsAllocation(uint256 requested, uint256 available);
+    error InvalidStartupWallet();
+    error NoAcceptedToken();
+    error PoolNotFailed();
+    error AlreadyRefunded();
+
     // Constants
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 private constant MAX_WINNERS = 3;
@@ -110,15 +159,17 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         address _factory,
         ICrowdVCPool.PoolConfig calldata _config
     ) external {
-        require(!_initialized, "Already initialized");
-        require(msg.sender == factory, "Only factory");
-        require(_config.maxContribution == 0 || _config.maxContribution >= _config.minContribution, "Invalid max contribution");
-        require(_config.fundingGoal > 0, "Invalid funding goal");
-        require(_config.votingDuration > 0 && _config.fundingDuration > 0, "Invalid durations");
-        require(_config.candidatePitches.length > 0, "No candidate pitches");
-        require(_config.acceptedToken != address(0), "Invalid token");
-        require(_config.treasury != address(0), "Invalid treasury");
-        require(_config.platformFeePercent <= 1000, "Fee too high"); // Max 10%
+        if (_initialized) revert AlreadyInitialized();
+        if (msg.sender != factory) revert OnlyFactory();
+        if (_config.maxContribution != 0 && _config.maxContribution < _config.minContribution) {
+            revert InvalidMaxContribution(_config.maxContribution, _config.minContribution);
+        }
+        if (_config.fundingGoal == 0) revert InvalidFundingGoal();
+        if (_config.votingDuration == 0 || _config.fundingDuration == 0) revert InvalidDurations();
+        if (_config.candidatePitches.length == 0) revert NoCandidatePitches();
+        if (_config.acceptedToken == address(0)) revert InvalidToken();
+        if (_config.treasury == address(0)) revert InvalidTreasury();
+        if (_config.platformFeePercent > 1000) revert FeeTooHigh(_config.platformFeePercent, 1000);
 
         poolName = _config.name;
         category = _config.category;
@@ -162,14 +213,14 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         nonReentrant
         returns (uint256 tokenId)
     {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(block.timestamp < votingDeadline, "Voting period ended");
-        require(amount >= minContribution, "Below minimum contribution");
-        if (maxContribution > 0) {
-            require(amount <= maxContribution, "Above maximum contribution");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
+        if (amount < minContribution) revert BelowMinContribution(amount, minContribution);
+        if (maxContribution > 0 && amount > maxContribution) {
+            revert AboveMaxContribution(amount, maxContribution);
         }
-        require(isAcceptedToken[token], "Token not accepted");
-        require(isCandidatePitch[pitchId], "Invalid pitch");
+        if (!isAcceptedToken[token]) revert TokenNotAccepted(token);
+        if (!isCandidatePitch[pitchId]) revert InvalidPitch(pitchId);
 
         // Calculate platform fee
         uint256 platformFee = FeeCalculator.calculatePlatformFee(amount, platformFeePercent);
@@ -220,12 +271,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @dev Withdraw contribution early with penalty (before voting ends)
      */
     function withdrawEarly() external override nonReentrant {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(block.timestamp < votingDeadline, "Voting ended");
-        require(contributions[msg.sender] > 0, "No contribution");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
+        if (contributions[msg.sender] == 0) revert NoContribution();
 
         ICrowdVCPool.Contribution storage contrib = contributionData[msg.sender];
-        require(!contrib.withdrawn, "Already withdrawn");
+        if (contrib.withdrawn) revert AlreadyWithdrawn();
 
         uint256 contribution = contributions[msg.sender];
         bytes32 pitchId = contrib.pitchId;
@@ -271,11 +322,11 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @param pitchId ID of the pitch to vote for
      */
     function vote(bytes32 pitchId) external override {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(block.timestamp < votingDeadline, "Voting period ended");
-        require(contributions[msg.sender] > 0, "No contribution");
-        require(isCandidatePitch[pitchId], "Invalid pitch");
-        require(!hasVoted[msg.sender][pitchId], "Already voted for this pitch");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
+        if (contributions[msg.sender] == 0) revert NoContribution();
+        if (!isCandidatePitch[pitchId]) revert InvalidPitch(pitchId);
+        if (hasVoted[msg.sender][pitchId]) revert AlreadyVotedForPitch(pitchId);
 
         uint256 weight = contributions[msg.sender];
         hasVoted[msg.sender][pitchId] = true;
@@ -290,14 +341,14 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @notice Once you contribute, your vote is locked to the pitch you contributed to
      */
     function changeVote(bytes32 newPitchId) external override {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(block.timestamp < votingDeadline, "Voting period ended");
-        require(contributions[msg.sender] == 0, "Already contributed - vote is locked");
-        require(isCandidatePitch[newPitchId], "Invalid pitch");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
+        if (contributions[msg.sender] != 0) revert AlreadyContributed();
+        if (!isCandidatePitch[newPitchId]) revert InvalidPitch(newPitchId);
 
         bytes32 oldPitchId = currentVote[msg.sender];
-        require(oldPitchId != bytes32(0), "No existing vote");
-        require(oldPitchId != newPitchId, "Already voted for this pitch");
+        if (oldPitchId == bytes32(0)) revert NoExistingVote();
+        if (oldPitchId == newPitchId) revert SamePitchVote();
 
         // Remove vote from old pitch
         hasVoted[msg.sender][oldPitchId] = false;
@@ -315,12 +366,12 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @param newPitchId New pitch to vote for
      */
     function changeVote(bytes32 oldPitchId, bytes32 newPitchId) external {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(block.timestamp < votingDeadline, "Voting period ended");
-        require(contributions[msg.sender] == 0, "Already contributed - vote is locked");
-        require(isCandidatePitch[newPitchId], "Invalid new pitch");
-        require(hasVoted[msg.sender][oldPitchId], "Haven't voted for old pitch");
-        require(!hasVoted[msg.sender][newPitchId], "Already voted for new pitch");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp >= votingDeadline) revert VotingPeriodEnded();
+        if (contributions[msg.sender] != 0) revert AlreadyContributed();
+        if (!isCandidatePitch[newPitchId]) revert InvalidPitch(newPitchId);
+        if (!hasVoted[msg.sender][oldPitchId]) revert NotVotedForPitch(oldPitchId);
+        if (hasVoted[msg.sender][newPitchId]) revert AlreadyVotedForPitch(newPitchId);
 
         // Remove vote from old pitch
         hasVoted[msg.sender][oldPitchId] = false;
@@ -337,11 +388,10 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @notice Selects top 3 pitches, handles ties by including all tied pitches
      */
     function endVoting() external override onlyRole(ADMIN_ROLE) {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(
-            block.timestamp >= votingDeadline || totalContributions >= fundingGoal,
-            "Voting period not ended"
-        );
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (block.timestamp < votingDeadline && totalContributions < fundingGoal) {
+            revert VotingPeriodNotEnded();
+        }
 
         if (totalContributions < fundingGoal) {
             status = PoolStatus.Failed;
@@ -478,9 +528,9 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @param wallet Startup wallet address
      */
     function addStartup(bytes32 pitchId, address wallet) external onlyRole(ADMIN_ROLE) {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(!isCandidatePitch[pitchId], "Pitch already added");
-        require(wallet != address(0), "Invalid wallet");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (isCandidatePitch[pitchId]) revert PitchAlreadyAdded(pitchId);
+        if (wallet == address(0)) revert InvalidWallet();
 
         candidatePitches.push(pitchId);
         isCandidatePitch[pitchId] = true;
@@ -494,9 +544,9 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @param pitchId ID of the pitch to remove
      */
     function removeStartup(bytes32 pitchId) external onlyRole(ADMIN_ROLE) {
-        require(status == PoolStatus.Active, "Pool not active");
-        require(isCandidatePitch[pitchId], "Pitch not in pool");
-        require(voteWeights[pitchId] == 0, "Pitch has votes");
+        if (status != PoolStatus.Active) revert PoolNotActive();
+        if (!isCandidatePitch[pitchId]) revert PitchNotInPool(pitchId);
+        if (voteWeights[pitchId] != 0) revert PitchHasVotes(pitchId, voteWeights[pitchId]);
 
         isCandidatePitch[pitchId] = false;
 
@@ -516,7 +566,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @dev Activate pool (factory only)
      */
     function activatePool() external onlyRole(ADMIN_ROLE) {
-        require(status == PoolStatus.Active, "Pool already active or closed");
+        if (status != PoolStatus.Active) revert PoolAlreadyActiveOrClosed();
         emit PoolActivated(block.timestamp);
     }
 
@@ -549,9 +599,9 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         override
         onlyRole(ADMIN_ROLE)
     {
-        require(_winnerIndex[pitchId] > 0, "Not a winner");
-        require(_milestones[pitchId].length == 0, "Milestones already set");
-        require(milestones.length > 0, "No milestones");
+        if (_winnerIndex[pitchId] == 0) revert NotAWinner(pitchId);
+        if (_milestones[pitchId].length != 0) revert MilestonesAlreadySet();
+        if (milestones.length == 0) revert NoMilestones();
 
         uint256 totalPercent = 0;
         
@@ -560,7 +610,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         uint256 approvalsNeeded = (pitchVoteWeight * 51) / 100; // 51% threshold
         
         for (uint256 i = 0; i < milestones.length; i++) {
-            require(milestones[i].fundingPercent > 0, "Invalid milestone percentage");
+            if (milestones[i].fundingPercent == 0) revert InvalidMilestonePercentage();
             
             // Create a new milestone with proper initialization
             _milestones[pitchId].push(Milestone({
@@ -577,7 +627,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
             totalPercent += milestones[i].fundingPercent;
         }
 
-        require(totalPercent == BASIS_POINTS, "Milestones must total 100%");
+        if (totalPercent != BASIS_POINTS) revert MilestonePercentageMismatch(totalPercent);
     }
     
     /**
@@ -586,14 +636,14 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @param milestoneIndex Index of the milestone to approve
      */
     function approveMilestone(bytes32 pitchId, uint256 milestoneIndex) external override {
-        require(_winnerIndex[pitchId] > 0, "Not a winner");
-        require(contributionsPerPitch[msg.sender][pitchId] > 0, "Did not contribute to this pitch");
-        require(milestoneIndex < _milestones[pitchId].length, "Invalid milestone index");
-        require(!milestoneApprovals[pitchId][milestoneIndex][msg.sender], "Already approved");
+        if (_winnerIndex[pitchId] == 0) revert NotAWinner(pitchId);
+        if (contributionsPerPitch[msg.sender][pitchId] == 0) revert DidNotContributeToThisPitch(pitchId);
+        if (milestoneIndex >= _milestones[pitchId].length) revert InvalidMilestoneIndex(milestoneIndex);
+        if (milestoneApprovals[pitchId][milestoneIndex][msg.sender]) revert AlreadyApprovedMilestone();
 
         Milestone storage milestone = _milestones[pitchId][milestoneIndex];
-        require(milestone.completed, "Milestone not marked complete");
-        require(!milestone.disputed, "Milestone is disputed");
+        if (!milestone.completed) revert MilestoneNotCompleted();
+        if (milestone.disputed) revert MilestoneDisputed();
 
         // Record approval
         milestoneApprovals[pitchId][milestoneIndex][msg.sender] = true;
@@ -613,16 +663,16 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         uint256 milestoneIndex,
         string calldata evidenceURI
     ) external override {
-        require(_winnerIndex[pitchId] > 0, "Not a winner");
+        if (_winnerIndex[pitchId] == 0) revert NotAWinner(pitchId);
 
         // Get startup address from factory
         ICrowdVCFactory factoryContract = ICrowdVCFactory(factory);
         ICrowdVCFactory.PitchData memory pitchData = factoryContract.getPitchData(pitchId);
-        require(msg.sender == pitchData.startup, "Not pitch owner");
+        if (msg.sender != pitchData.startup) revert NotPitchOwner(msg.sender, pitchData.startup);
 
         Milestone storage milestone = _milestones[pitchId][milestoneIndex];
-        require(!milestone.completed, "Already completed");
-        require(!milestone.disputed, "Milestone disputed");
+        if (milestone.completed) revert AlreadyCompleted();
+        if (milestone.disputed) revert MilestoneDisputed();
 
         milestone.completed = true;
         milestone.evidenceURI = evidenceURI;
@@ -640,17 +690,20 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         onlyRole(ADMIN_ROLE)
         nonReentrant
     {
-        require(status == PoolStatus.Funded, "Pool not funded");
-        require(_winnerIndex[pitchId] > 0, "Not a winner");
+        if (status != PoolStatus.Funded) revert PoolNotFunded();
+        if (_winnerIndex[pitchId] == 0) revert NotAWinner(pitchId);
 
         Milestone storage milestone = _milestones[pitchId][milestoneIndex];
-        require(milestone.completed, "Milestone not completed");
-        require(!milestone.disputed, "Milestone disputed");
-        require(milestone.approvalCount >= milestone.approvalsNeeded, "Insufficient investor approvals");
+        if (!milestone.completed) revert MilestoneNotCompleted();
+        if (milestone.disputed) revert MilestoneDisputed();
+        if (milestone.approvalCount < milestone.approvalsNeeded) {
+            revert InsufficientApprovals(milestone.approvalCount, milestone.approvalsNeeded);
+        }
 
         // Calculate amount
         uint256 amount = (totalAllocated[pitchId] * milestone.fundingPercent) / BASIS_POINTS;
-        require(totalDistributed[pitchId] + amount <= totalAllocated[pitchId], "Exceeds allocation");
+        uint256 available = totalAllocated[pitchId] - totalDistributed[pitchId];
+        if (amount > available) revert ExceedsAllocation(amount, available);
 
         totalDistributed[pitchId] += amount;
 
@@ -662,11 +715,11 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
 
         // Get startup wallet
         address startupWallet = pitchToWallet[pitchId];
-        require(startupWallet != address(0), "Invalid startup wallet");
+        if (startupWallet == address(0)) revert InvalidStartupWallet();
 
         // Transfer funds (use first accepted token for now)
         address token = acceptedTokens.length > 0 ? acceptedTokens[0] : address(0);
-        require(token != address(0), "No accepted token");
+        if (token == address(0)) revert NoAcceptedToken();
         IERC20(token).safeTransfer(startupWallet, amount);
 
         emit FundsDistributed(pitchId, startupWallet, amount);
@@ -681,9 +734,9 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
      * @notice Returns the FULL original amount including platform fee (fair refund)
      */
     function requestRefund() external override nonReentrant {
-        require(status == PoolStatus.Failed, "Pool not failed");
-        require(contributions[msg.sender] > 0, "No contribution");
-        require(!hasRefunded[msg.sender], "Already refunded");
+        if (status != PoolStatus.Failed) revert PoolNotFailed();
+        if (contributions[msg.sender] == 0) revert NoContribution();
+        if (hasRefunded[msg.sender]) revert AlreadyRefunded();
 
         ICrowdVCPool.Contribution storage contrib = contributionData[msg.sender];
         

@@ -285,22 +285,10 @@ contract CrowdVCFactory is
             MIN_VOTING_DURATION,
             MAX_VOTING_DURATION
         );
-        ValidationLib.validateNonEmptyArray(params.candidatePitches);
+        // Note: candidatePitches can be empty - startups can be added later via addStartupToPool
 
         if (!supportedTokens[params.acceptedToken]) revert TokenNotSupported();
         if (params.maxContribution != 0 && params.maxContribution < params.minContribution) revert InvalidMaxContribution();
-
-        // Verify all pitches are approved (optimized loop)
-        uint256 pitchCount = params.candidatePitches.length;
-        for (uint256 i = 0; i < pitchCount;) {
-            bytes32 pitchId = params.candidatePitches[i];
-            PitchData storage pitch = _pitches[pitchId];
-
-            if (pitch.status != PitchStatus.Approved) revert PitchNotApproved();
-            pitch.status = PitchStatus.InPool;
-
-            unchecked { ++i; }
-        }
 
         // Deploy new pool contract using minimal proxy (ERC-1167)
         address poolAddress = Clones.clone(poolImplementation);
