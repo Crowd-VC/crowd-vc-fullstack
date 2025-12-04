@@ -4,7 +4,7 @@ import {
   projectId,
   wagmiAdapter,
   wagmiMetaData,
-} from '@/app/shared/wagmi-config';
+} from '@/config/wagmi-config';
 import { sepolia, base } from '@reown/appkit/networks';
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiProvider, cookieToInitialState } from 'wagmi';
