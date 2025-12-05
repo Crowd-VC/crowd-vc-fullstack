@@ -267,10 +267,10 @@ contract CrowdVCFactory is
         nonReentrant
         returns (address)
     {
+        // Validate pool ID - check string length before hashing
+        if (bytes(params.poolId).length == 0) revert ValidationLib.InvalidString();
         bytes32 poolId = keccak256(bytes(params.poolId));
-        
-        // Validate pool ID
-        if (poolId == bytes32(0)) revert ValidationLib.InvalidString();
+
         if (poolIdToAddress[poolId] != address(0)) revert PoolIdAlreadyExists();
 
         // Validate parameters

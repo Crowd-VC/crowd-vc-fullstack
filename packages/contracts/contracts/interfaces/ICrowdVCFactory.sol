@@ -57,7 +57,7 @@ interface ICrowdVCFactory {
     event UserTypeUpdated(address indexed user, UserType oldType, UserType newType);
     event PitchSubmitted(bytes32 indexed pitchId, address indexed startup, string title, string ipfsHash);
     event PitchStatusUpdated(bytes32 indexed pitchId, PitchStatus oldStatus, PitchStatus newStatus);
-    event PoolDeployed(string indexed poolId, address indexed poolAddress, uint256 votingDeadline, uint256 timestamp);
+    event PoolDeployed(string poolId, address indexed poolAddress, uint256 votingDeadline, uint256 timestamp);
     event PlatformFeeUpdated(uint256 oldFee, uint256 newFee);
     event TreasuryUpdated(address oldTreasury, address newTreasury);
     event EmergencyWithdrawal(address indexed poolAddress, uint256 timestamp);

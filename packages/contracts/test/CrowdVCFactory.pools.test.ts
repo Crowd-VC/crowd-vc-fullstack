@@ -66,8 +66,11 @@ describe('CrowdVCFactory - Pool Management', function () {
           account: owner.account,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const logs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+        );
 
         assert.strictEqual(logs.length, 1, 'Should emit one event');
         assert.strictEqual(logs[0].args.poolId, DEFAULT_POOL_ID, 'Pool ID should match');
@@ -92,8 +95,11 @@ describe('CrowdVCFactory - Pool Management', function () {
           account: owner.account,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const logs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+        );
 
         assert.strictEqual(logs.length, 1, 'Should emit one event');
         assert.strictEqual(logs[0].args.poolId, 'event-test-pool', 'Pool ID should match');
@@ -115,8 +121,11 @@ describe('CrowdVCFactory - Pool Management', function () {
           account: owner.account,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const logs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+        );
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
         // Check isPool
@@ -432,6 +441,9 @@ describe('CrowdVCFactory - Pool Management', function () {
           /EnforcedPause/,
           'Should revert with EnforcedPause'
         );
+
+        // Unpause to ensure clean state for subsequent tests
+        await factory.write.unpause({ account: owner.account });
       });
     });
   });
@@ -452,8 +464,8 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const logs = await factory.getEvents.PoolDeployed({}, { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
         // Add startup
@@ -468,9 +480,10 @@ describe('CrowdVCFactory - Pool Management', function () {
       });
 
       it('should add multiple startups to pool', async function () {
-        const { factory, owner, usdt, pitch1Id, pitch2Id, publicClient, startup1, startup2 } =
+        const { factory, owner, usdt, pitch2Id, pitch3Id, publicClient, startup2, startup3 } =
           await networkHelpers.loadFixture(fixtureWithApprovedPitches);
 
+        // Use pitch2Id and pitch3Id which weren't used in previous test
         // Create pool without pitches
         const poolParams = createPoolParams({
           poolId: 'multi-startup-pool',
@@ -481,25 +494,25 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const logs = await factory.getEvents.PoolDeployed({}, { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
-        // Add startups
-        await factory.write.addStartupToPool(
-          [poolAddress, pitch1Id, getAddress(startup1.account.address)],
-          { account: owner.account }
-        );
+        // Add startups - using pitch2 and pitch3 to avoid state interference
         await factory.write.addStartupToPool(
           [poolAddress, pitch2Id, getAddress(startup2.account.address)],
           { account: owner.account }
         );
+        await factory.write.addStartupToPool(
+          [poolAddress, pitch3Id, getAddress(startup3.account.address)],
+          { account: owner.account }
+        );
 
         // Verify both pitches in pool
-        const pitch1Data = await factory.read.getPitchData([pitch1Id]);
         const pitch2Data = await factory.read.getPitchData([pitch2Id]);
-        assert.strictEqual(pitch1Data.status, PitchStatus.InPool);
+        const pitch3Data = await factory.read.getPitchData([pitch3Id]);
         assert.strictEqual(pitch2Data.status, PitchStatus.InPool);
+        assert.strictEqual(pitch3Data.status, PitchStatus.InPool);
       });
     });
 
@@ -537,8 +550,11 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const createReceipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const logs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: createReceipt.blockNumber, toBlock: createReceipt.blockNumber }
+        );
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
         const fakePitchId =
@@ -579,8 +595,11 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const poolLogs = await factory.getEvents.PoolDeployed();
+        const poolReceipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const poolLogs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: poolReceipt.blockNumber, toBlock: poolReceipt.blockNumber }
+        );
         const poolAddress = poolLogs[0].args.poolAddress as `0x${string}`;
 
         await assert.rejects(
@@ -609,8 +628,8 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const logs = await factory.getEvents.PoolDeployed({}, { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
         await assert.rejects(
@@ -620,7 +639,7 @@ describe('CrowdVCFactory - Pool Management', function () {
               { account: owner.account }
             );
           },
-          /InvalidAddress/,
+          (err: Error) => err.message.includes('InvalidAddress'),
           'Should revert with InvalidAddress'
         );
       });
@@ -639,8 +658,11 @@ describe('CrowdVCFactory - Pool Management', function () {
         const createHash = await factory.write.createPool([poolParams], {
           account: owner.account,
         });
-        await publicClient.waitForTransactionReceipt({ hash: createHash });
-        const logs = await factory.getEvents.PoolDeployed();
+        const createReceipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+        const logs = await factory.getEvents.PoolDeployed(
+          {},
+          { fromBlock: createReceipt.blockNumber, toBlock: createReceipt.blockNumber }
+        );
         const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
         await assert.rejects(
@@ -737,7 +759,7 @@ describe('CrowdVCFactory - Pool Management', function () {
 
   describe('activatePool', function () {
     it('should activate pool', async function () {
-      const { factory, owner, poolAddress, publicClient } =
+      const { factory, owner, poolAddress, publicClient, pool } =
         await networkHelpers.loadFixture(fixtureWithPool);
 
       const hash = await factory.write.activatePool([poolAddress], {
@@ -746,9 +768,12 @@ describe('CrowdVCFactory - Pool Management', function () {
 
       await publicClient.waitForTransactionReceipt({ hash });
 
-      // Pool should still be active
-      const pool = await getPoolContract(poolAddress);
-      const status = await pool.read.status();
+      // Pool should still be active - use publicClient.readContract since pool.read has issues with Hardhat 3.0
+      const status = await publicClient.readContract({
+        address: poolAddress,
+        abi: pool.abi,
+        functionName: 'status',
+      });
       assert.strictEqual(status, PoolStatus.Active);
     });
 
@@ -863,8 +888,11 @@ describe('CrowdVCFactory - Pool Management', function () {
       const hash = await factory.write.createPool([poolParams], {
         account: owner.account,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
-      const logs = await factory.getEvents.PoolDeployed();
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const logs = await factory.getEvents.PoolDeployed(
+        {},
+        { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+      );
       const expectedAddress = logs[0].args.poolAddress as `0x${string}`;
 
       // Compute pool ID hash
@@ -887,8 +915,11 @@ describe('CrowdVCFactory - Pool Management', function () {
       const hash = await factory.write.createPool([poolParams], {
         account: owner.account,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
-      const logs = await factory.getEvents.PoolDeployed();
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const logs = await factory.getEvents.PoolDeployed(
+        {},
+        { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+      );
       const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
       const poolIdHash = await factory.read.getPoolId([poolAddress]);

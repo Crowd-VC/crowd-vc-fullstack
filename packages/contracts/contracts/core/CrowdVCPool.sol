@@ -78,8 +78,8 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 1000; // 10%
     uint256 private constant BASIS_POINTS = 10000;
 
-    // Immutable factory reference
-    address public immutable factory;
+    // Factory reference (set during initialization for clones)
+    address public factory;
 
     // Pool configuration
     string public poolName;
@@ -161,13 +161,17 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         ICrowdVCPool.PoolConfig calldata _config
     ) external {
         if (_initialized) revert AlreadyInitialized();
-        if (msg.sender != factory) revert OnlyFactory();
+        if (_factory == address(0)) revert OnlyFactory();
+        // For clones, factory is not set by constructor, so we set it here
+        // and verify the caller is the same address being set as factory
+        if (msg.sender != _factory) revert OnlyFactory();
+        factory = _factory;
         if (_config.maxContribution != 0 && _config.maxContribution < _config.minContribution) {
             revert InvalidMaxContribution(_config.maxContribution, _config.minContribution);
         }
         if (_config.fundingGoal == 0) revert InvalidFundingGoal();
         if (_config.votingDuration == 0 || _config.fundingDuration == 0) revert InvalidDurations();
-        if (_config.candidatePitches.length == 0) revert NoCandidatePitches();
+        // Note: candidatePitches can be empty - startups can be added later via addStartupToPool
         if (_config.acceptedToken == address(0)) revert InvalidToken();
         if (_config.treasury == address(0)) revert InvalidTreasury();
         if (_config.platformFeePercent > 1000) revert FeeTooHigh(_config.platformFeePercent, 1000);

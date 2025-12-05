@@ -2,7 +2,7 @@
  * Deployed Contract Addresses
  * Auto-generated from Ignition deployments - DO NOT EDIT MANUALLY
  * 
- * Generated at: 2025-12-04T21:57:44.131Z
+ * Generated at: 2025-12-05T22:24:56.580Z
  * Run 'pnpm generate:addresses' in packages/contracts to regenerate
  */
 

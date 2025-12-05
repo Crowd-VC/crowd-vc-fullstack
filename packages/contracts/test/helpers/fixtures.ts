@@ -196,8 +196,11 @@ export async function fixtureWithPitches(): Promise<FixtureWithPitchesResult> {
     [DEFAULT_PITCH_TITLE, DEFAULT_PITCH_IPFS, DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup1.account }
   );
-  await publicClient.waitForTransactionReceipt({ hash: hash1 });
-  const logs1 = await factory.getEvents.PitchSubmitted();
+  const receipt1 = await publicClient.waitForTransactionReceipt({ hash: hash1 });
+  const logs1 = await factory.getEvents.PitchSubmitted(
+    {},
+    { fromBlock: receipt1.blockNumber, toBlock: receipt1.blockNumber }
+  );
   const pitch1Id = logs1[0].args.pitchId as `0x${string}`;
 
   // Submit pitch from startup2
@@ -205,18 +208,24 @@ export async function fixtureWithPitches(): Promise<FixtureWithPitchesResult> {
     ['Second Startup Pitch', 'ipfs://QmSecondPitch', DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup2.account }
   );
-  await publicClient.waitForTransactionReceipt({ hash: hash2 });
-  const logs2 = await factory.getEvents.PitchSubmitted();
-  const pitch2Id = logs2[1].args.pitchId as `0x${string}`;
+  const receipt2 = await publicClient.waitForTransactionReceipt({ hash: hash2 });
+  const logs2 = await factory.getEvents.PitchSubmitted(
+    {},
+    { fromBlock: receipt2.blockNumber, toBlock: receipt2.blockNumber }
+  );
+  const pitch2Id = logs2[0].args.pitchId as `0x${string}`;
 
   // Submit pitch from startup3
   const hash3 = await factory.write.submitPitch(
     ['Third Startup Pitch', 'ipfs://QmThirdPitch', DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup3.account }
   );
-  await publicClient.waitForTransactionReceipt({ hash: hash3 });
-  const logs3 = await factory.getEvents.PitchSubmitted();
-  const pitch3Id = logs3[2].args.pitchId as `0x${string}`;
+  const receipt3 = await publicClient.waitForTransactionReceipt({ hash: hash3 });
+  const logs3 = await factory.getEvents.PitchSubmitted(
+    {},
+    { fromBlock: receipt3.blockNumber, toBlock: receipt3.blockNumber }
+  );
+  const pitch3Id = logs3[0].args.pitchId as `0x${string}`;
 
   return {
     ...base,
@@ -280,7 +289,8 @@ export async function fixtureWithPool(): Promise<FixtureWithPoolResult> {
 
   const { viem } = await hre.network.connect();
 
-  // Create pool with approved pitches
+  // Create pool WITHOUT candidate pitches - we'll add them via addStartupToPool
+  // This allows us to properly set wallet addresses for each pitch
   const poolParams = {
     poolId: DEFAULT_POOL_ID,
     name: DEFAULT_POOL_NAME,
@@ -288,7 +298,7 @@ export async function fixtureWithPool(): Promise<FixtureWithPoolResult> {
     fundingGoal: DEFAULT_POOL_FUNDING_GOAL,
     votingDuration: DEFAULT_VOTING_DURATION,
     fundingDuration: DEFAULT_FUNDING_DURATION,
-    candidatePitches: [pitch1Id, pitch2Id, pitch3Id],
+    candidatePitches: [] as `0x${string}`[],
     acceptedToken: usdt.address,
     minContribution: DEFAULT_MIN_CONTRIBUTION,
     maxContribution: DEFAULT_MAX_CONTRIBUTION,
@@ -297,8 +307,11 @@ export async function fixtureWithPool(): Promise<FixtureWithPoolResult> {
   const hash = await factory.write.createPool([poolParams], {
     account: owner.account,
   });
-  await publicClient.waitForTransactionReceipt({ hash });
-  const logs = await factory.getEvents.PoolDeployed();
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const logs = await factory.getEvents.PoolDeployed(
+    {},
+    { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }
+  );
   const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
   // Get pool contract instance
