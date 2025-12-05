@@ -27,11 +27,13 @@ export async function getPitchBySubmissionId(
 /**
  * Get all pitches by user ID
  */
-export async function getPitchesByUserId(userId: string): Promise<Pitch[]> {
+export async function getPitchesByUserId(
+  walletAddress: string,
+): Promise<Pitch[]> {
   return await db
     .select()
     .from(pitches)
-    .where(eq(pitches.userId, userId))
+    .where(eq(pitches.userId, walletAddress))
     .orderBy(desc(pitches.dateSubmitted));
 }
 
