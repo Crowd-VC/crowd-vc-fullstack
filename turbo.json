@@ -15,7 +15,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "artifacts/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "artifacts/**"],
+      "env": [
+        "PINATA_JWT_TOKEN",
+        "NEXT_PUBLIC_PINATA_GATEWAY",
+        "PINATA_KEY",
+        "PINATA_API_KEY"
+      ]
     },
     "compile": {
       "outputs": ["artifacts/**", "cache/**"],
