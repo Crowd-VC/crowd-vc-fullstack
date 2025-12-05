@@ -47,13 +47,10 @@ export async function uploadPitch(formData: FormData) {
       imageCid = imageUpload.cid;
     }
 
-    // Generate signed URL for the image if it exists
+    // Generate public gateway URL for the image if it exists
     let imageUrl: string | undefined;
     if (imageCid) {
-      imageUrl = await pinata.gateways.createSignedURL({
-        cid: imageCid,
-        expires: 31536000, // 1 year in seconds
-      });
+      imageUrl = `https://${gateway}/ipfs/${imageCid}`;
     }
 
     // Add file CIDs to metadata
