@@ -3,6 +3,7 @@ import { createPitch } from "@/db/queries/pitches";
 import { createUser, getUserByWallet } from "@/db/queries/users";
 import type { NewPitch } from "@/db/schema/pitches";
 import type { NewUser } from "@/db/schema/users";
+import { nanoid } from "nanoid";
 
 /**
  * POST /api/pitches
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Get user ID from body (expected to be wallet address)
-        let userId = body.userId || "user_2";
+        let userId = body.userId || nanoid();
 
         // If userId looks like a wallet address, ensure user exists in DB
         if (typeof userId === "string" && userId.startsWith("0x")) {
