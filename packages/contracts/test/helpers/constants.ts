@@ -1,100 +1,83 @@
-import { keccak256, toBytes } from "viem";
-
 /**
- * Contract Constants from CrowdVCFactory
+ * Test Constants for CrowdVC Platform Tests
+ *
+ * This file contains all constants, configurations, and magic numbers
+ * used across the CrowdVC test suite.
+ *
+ * Compatible with Hardhat 3.0 + node:test + viem
  */
 
-// Funding goal limits (in token base units, e.g., 6 decimals for USDT/USDC)
-export const MIN_FUNDING_GOAL = BigInt(10000 * 1e6); // 10,000 tokens
-export const MAX_FUNDING_GOAL = BigInt(1000000 * 1e6); // 1,000,000 tokens
+import { parseUnits, keccak256, toBytes } from 'viem';
 
-// Pool goal limits
-export const MIN_POOL_GOAL = BigInt(50000 * 1e6); // 50,000 tokens
-export const MAX_POOL_GOAL = BigInt(5000000 * 1e6); // 5,000,000 tokens
+// ============ TOKEN DECIMALS ============
+// USDT and USDC use 6 decimals (not 18 like most ERC20 tokens)
+export const TOKEN_DECIMALS = 6;
 
-// Duration limits (in seconds)
-export const MIN_VOTING_DURATION = BigInt(1 * 24 * 60 * 60); // 1 day
-export const MAX_VOTING_DURATION = BigInt(30 * 24 * 60 * 60); // 30 days
-export const MIN_FUNDING_DURATION = BigInt(7 * 24 * 60 * 60); // 7 days
-export const MAX_FUNDING_DURATION = BigInt(90 * 24 * 60 * 60); // 90 days
+// ============ FUNDING CONSTANTS ============
+// These match the contract constants in CrowdVCFactory.sol
 
-/**
- * Contract Constants from CrowdVCPool
- */
+/** Minimum funding goal for a pitch (1,000 USDC/USDT) */
+export const MIN_FUNDING_GOAL = parseUnits('1000', TOKEN_DECIMALS);
 
-export const MAX_WINNERS = 3; // Maximum number of winning pitches per pool
-export const EARLY_WITHDRAWAL_PENALTY = 1000; // 10% in basis points
-export const BASIS_POINTS = 10000; // 100% = 10000 basis points
+/** Maximum funding goal for a pitch (10,000,000 USDC/USDT) */
+export const MAX_FUNDING_GOAL = parseUnits('10000000', TOKEN_DECIMALS);
 
-/**
- * OpenZeppelin AccessControl Role Identifiers
- * These should match the keccak256 hashes in the contracts
- */
+/** Minimum pool goal (10,000 USDC/USDT) */
+export const MIN_POOL_GOAL = parseUnits('10000', TOKEN_DECIMALS);
 
-// DEFAULT_ADMIN_ROLE is bytes32(0)
-export const DEFAULT_ADMIN_ROLE = `0x${"0".repeat(64)}` as `0x${string}`;
+/** Maximum pool goal (50,000,000 USDC/USDT) */
+export const MAX_POOL_GOAL = parseUnits('50000000', TOKEN_DECIMALS);
 
-// ADMIN_ROLE = keccak256("ADMIN_ROLE")
-export const ADMIN_ROLE = keccak256(toBytes("ADMIN_ROLE"));
+// ============ DURATION CONSTANTS ============
+// Time values in seconds
 
-// STARTUP_ROLE = keccak256("STARTUP_ROLE")
-export const STARTUP_ROLE = keccak256(toBytes("STARTUP_ROLE"));
+/** One day in seconds */
+export const ONE_DAY = 86400n;
 
-// INVESTOR_ROLE = keccak256("INVESTOR_ROLE")
-export const INVESTOR_ROLE = keccak256(toBytes("INVESTOR_ROLE"));
+/** Minimum voting duration (1 day) */
+export const MIN_VOTING_DURATION = ONE_DAY;
 
-/**
- * Test Configuration Values
- */
+/** Maximum voting duration (30 days) */
+export const MAX_VOTING_DURATION = 30n * ONE_DAY;
 
-// Default platform fee for tests (500 basis points = 5%)
-export const DEFAULT_PLATFORM_FEE = 500;
+/** One week in seconds */
+export const ONE_WEEK = 7n * ONE_DAY;
 
-// Default pool parameters
-export const DEFAULT_POOL_CONFIG = {
-  fundingGoal: BigInt(150000 * 1e6), // 150,000 tokens
-  votingDuration: BigInt(7 * 24 * 60 * 60), // 7 days
-  fundingDuration: BigInt(30 * 24 * 60 * 60), // 30 days
-  minContribution: BigInt(100 * 1e6), // 100 tokens
-} as const;
+/** One hour in seconds */
+export const ONE_HOUR = 3600n;
 
-// Sample metadata URIs
-export const SAMPLE_METADATA = {
-  startup: "ipfs://QmStartupMetadata123",
-  investor: "ipfs://QmInvestorMetadata456",
-  pitch: "ipfs://QmPitchData789",
-} as const;
+// ============ FEE CONSTANTS ============
+// All fees are in basis points (10000 = 100%)
 
-// Sample pitch data
-export const SAMPLE_PITCHES = [
-  {
-    title: "AI-Powered Analytics Platform",
-    ipfsHash: "QmPitch1HashABC",
-    fundingGoal: BigInt(50000 * 1e6), // 50,000 tokens
-  },
-  {
-    title: "Blockchain Supply Chain Solution",
-    ipfsHash: "QmPitch2HashDEF",
-    fundingGoal: BigInt(75000 * 1e6), // 75,000 tokens
-  },
-  {
-    title: "Green Energy Marketplace",
-    ipfsHash: "QmPitch3HashGHI",
-    fundingGoal: BigInt(60000 * 1e6), // 60,000 tokens
-  },
-] as const;
+/** Basis points denominator */
+export const BASIS_POINTS = 10000n;
 
-/**
- * Token Constants
- */
+/** Maximum platform fee (10% = 1000 basis points) */
+export const MAX_PLATFORM_FEE = 1000n;
 
-export const USDT_DECIMALS = 6;
-export const USDC_DECIMALS = 6;
+/** Default platform fee for tests (5% = 500 basis points) */
+export const DEFAULT_PLATFORM_FEE = 500n;
 
-/**
- * Enum Mappings
- * These match the Solidity enum definitions
- */
+/** Early withdrawal penalty (10% = 1000 basis points) */
+export const EARLY_WITHDRAWAL_PENALTY = 1000n;
+
+// ============ ROLE CONSTANTS ============
+// These match the keccak256 hashes in the contract
+
+/** DEFAULT_ADMIN_ROLE - OpenZeppelin AccessControl default admin */
+export const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`;
+
+/** ADMIN_ROLE hash */
+export const ADMIN_ROLE = keccak256(toBytes('ADMIN_ROLE'));
+
+/** STARTUP_ROLE hash */
+export const STARTUP_ROLE = keccak256(toBytes('STARTUP_ROLE'));
+
+/** INVESTOR_ROLE hash */
+export const INVESTOR_ROLE = keccak256(toBytes('INVESTOR_ROLE'));
+
+// ============ USER TYPE ENUM ============
+// Matches ICrowdVCFactory.UserType enum
 
 export enum UserType {
   None = 0,
@@ -103,14 +86,23 @@ export enum UserType {
   Admin = 3,
 }
 
+// ============ PITCH STATUS ENUM ============
+// Matches ICrowdVCFactory.PitchStatus enum
+
 export enum PitchStatus {
   Pending = 0,
   UnderReview = 1,
-  Approved = 2,
-  Rejected = 3,
-  InPool = 4,
-  Funded = 5,
+  Shortlisted = 2,
+  NeedsMoreInfo = 3,
+  ConditionalApproval = 4,
+  Approved = 5,
+  Rejected = 6,
+  InPool = 7,
+  Funded = 8,
 }
+
+// ============ POOL STATUS ENUM ============
+// Matches ICrowdVCPool.PoolStatus enum
 
 export enum PoolStatus {
   Active = 0,
@@ -120,68 +112,204 @@ export enum PoolStatus {
   Failed = 4,
 }
 
-/**
- * Test Account Roles
- * Helpers for consistent account usage across test files
- */
+// ============ TEST DATA ============
+// Default values for testing
 
-export const ACCOUNT_ROLES = {
-  ADMIN_INDEX: 0,
-  TREASURY_INDEX: 1,
-  STARTUP_1_INDEX: 2,
-  STARTUP_2_INDEX: 3,
-  STARTUP_3_INDEX: 4,
-  INVESTOR_1_INDEX: 5,
-  INVESTOR_2_INDEX: 6,
-  INVESTOR_3_INDEX: 7,
-} as const;
+/** Default metadata URI for user registration */
+export const DEFAULT_METADATA_URI = 'ipfs://QmTest123456789';
 
-/**
- * Time Constants
- */
+/** Default pitch title */
+export const DEFAULT_PITCH_TITLE = 'Test Startup Pitch';
 
-export const TIME_UNITS = {
-  SECOND: 1,
-  MINUTE: 60,
-  HOUR: 60 * 60,
-  DAY: 24 * 60 * 60,
-  WEEK: 7 * 24 * 60 * 60,
-  MONTH: 30 * 24 * 60 * 60,
-} as const;
+/** Default IPFS hash for pitch deck */
+export const DEFAULT_PITCH_IPFS = 'ipfs://QmPitchDeck123456789';
 
-/**
- * Gas Limits (for gas testing)
- */
+/** Default funding goal for pitches (100,000 USDC) */
+export const DEFAULT_PITCH_FUNDING_GOAL = parseUnits('100000', TOKEN_DECIMALS);
 
-export const GAS_LIMITS = {
-  REGISTER_USER: 200000,
-  SUBMIT_PITCH: 300000,
-  CREATE_POOL: 500000,
-  CONTRIBUTE: 250000,
-  VOTE: 150000,
-  CLAIM_FUNDS: 200000,
-  WITHDRAW: 180000,
-} as const;
+/** Default pool name */
+export const DEFAULT_POOL_NAME = 'Test Investment Pool';
 
-/**
- * Error Messages
- * Common error messages from contract validations
- */
+/** Default pool category */
+export const DEFAULT_POOL_CATEGORY = 'DeFi';
 
-export const ERROR_MESSAGES = {
+/** Default pool ID */
+export const DEFAULT_POOL_ID = 'test-pool-001';
+
+/** Default pool funding goal (100,000 USDC) */
+export const DEFAULT_POOL_FUNDING_GOAL = parseUnits('100000', TOKEN_DECIMALS);
+
+/** Default voting duration (7 days) */
+export const DEFAULT_VOTING_DURATION = ONE_WEEK;
+
+/** Default funding duration (14 days) */
+export const DEFAULT_FUNDING_DURATION = 14n * ONE_DAY;
+
+/** Default minimum contribution (100 USDC) */
+export const DEFAULT_MIN_CONTRIBUTION = parseUnits('100', TOKEN_DECIMALS);
+
+/** Default maximum contribution (0 = no limit) */
+export const DEFAULT_MAX_CONTRIBUTION = 0n;
+
+// ============ TEST AMOUNTS ============
+
+/** Small contribution amount for testing (100 USDC) */
+export const SMALL_CONTRIBUTION = parseUnits('100', TOKEN_DECIMALS);
+
+/** Medium contribution amount for testing (1,000 USDC) */
+export const MEDIUM_CONTRIBUTION = parseUnits('1000', TOKEN_DECIMALS);
+
+/** Large contribution amount for testing (10,000 USDC) */
+export const LARGE_CONTRIBUTION = parseUnits('10000', TOKEN_DECIMALS);
+
+/** Very large contribution for testing (50,000 USDC) */
+export const VERY_LARGE_CONTRIBUTION = parseUnits('50000', TOKEN_DECIMALS);
+
+/** Faucet amount from mock tokens (10,000 USDC/USDT) */
+export const FAUCET_AMOUNT = parseUnits('10000', TOKEN_DECIMALS);
+
+/** Mint amount for testing (1,000,000 USDC/USDT) */
+export const MINT_AMOUNT = parseUnits('1000000', TOKEN_DECIMALS);
+
+// ============ VOTING CONSTANTS ============
+
+/** Maximum winners per pool */
+export const MAX_WINNERS = 3;
+
+/** Maximum votes per investor */
+export const MAX_VOTES_PER_INVESTOR = 3;
+
+// ============ ERROR MESSAGES ============
+// Custom error selectors for testing reverts
+
+export const ERRORS = {
+  // CrowdVCFactory errors
+  InvalidUserType: 'InvalidUserType',
+  AlreadyRegistered: 'AlreadyRegistered',
+  UserNotRegistered: 'UserNotRegistered',
+  InvalidType: 'InvalidType',
+  PitchAlreadyExists: 'PitchAlreadyExists',
+  PitchDoesNotExist: 'PitchDoesNotExist',
+  PitchNotApproved: 'PitchNotApproved',
+  InvalidPool: 'InvalidPool',
+  PoolIdAlreadyExists: 'PoolIdAlreadyExists',
+  InvalidMaxContribution: 'InvalidMaxContribution',
+  TokenNotSupported: 'TokenNotSupported',
+  FeeTooHigh: 'FeeTooHigh',
+  PitchNotInPool: 'PitchNotInPool',
+
+  // CrowdVCPool errors
+  AlreadyInitialized: 'AlreadyInitialized',
+  OnlyFactory: 'OnlyFactory',
+  InvalidFundingGoal: 'InvalidFundingGoal',
+  InvalidDurations: 'InvalidDurations',
+  NoCandidatePitches: 'NoCandidatePitches',
+  InvalidToken: 'InvalidToken',
+  InvalidTreasury: 'InvalidTreasury',
+  PoolNotActive: 'PoolNotActive',
+  VotingPeriodEnded: 'VotingPeriodEnded',
+  VotingPeriodNotEnded: 'VotingPeriodNotEnded',
+  BelowMinContribution: 'BelowMinContribution',
+  AboveMaxContribution: 'AboveMaxContribution',
+  TokenNotAccepted: 'TokenNotAccepted',
+  InvalidPitch: 'InvalidPitch',
+  NoContribution: 'NoContribution',
+  AlreadyWithdrawn: 'AlreadyWithdrawn',
+  AlreadyVotedForPitch: 'AlreadyVotedForPitch',
+  AlreadyContributed: 'AlreadyContributed',
+  NoExistingVote: 'NoExistingVote',
+  SamePitchVote: 'SamePitchVote',
+  NotVotedForPitch: 'NotVotedForPitch',
+  NotAWinner: 'NotAWinner',
+  DidNotContributeToThisPitch: 'DidNotContributeToThisPitch',
+  InvalidMilestoneIndex: 'InvalidMilestoneIndex',
+  AlreadyApprovedMilestone: 'AlreadyApprovedMilestone',
+  MilestoneNotCompleted: 'MilestoneNotCompleted',
+  MilestoneDisputed: 'MilestoneDisputed',
+  PitchAlreadyAdded: 'PitchAlreadyAdded',
+  InvalidWallet: 'InvalidWallet',
+  PitchNotInPool: 'PitchNotInPool',
+  PitchHasVotes: 'PitchHasVotes',
+  PoolAlreadyActiveOrClosed: 'PoolAlreadyActiveOrClosed',
+  MilestonesAlreadySet: 'MilestonesAlreadySet',
+  NoMilestones: 'NoMilestones',
+  InvalidMilestonePercentage: 'InvalidMilestonePercentage',
+  MilestonePercentageMismatch: 'MilestonePercentageMismatch',
+  NotPitchOwner: 'NotPitchOwner',
+  AlreadyCompleted: 'AlreadyCompleted',
+  PoolNotFunded: 'PoolNotFunded',
+  InsufficientApprovals: 'InsufficientApprovals',
+  ExceedsAllocation: 'ExceedsAllocation',
+  InvalidStartupWallet: 'InvalidStartupWallet',
+  NoAcceptedToken: 'NoAcceptedToken',
+  PoolNotFailed: 'PoolNotFailed',
+  AlreadyRefunded: 'AlreadyRefunded',
+  MaxVotesExceeded: 'MaxVotesExceeded',
+  NotVotedForAnyPitch: 'NotVotedForAnyPitch',
+  SoulboundToken: 'SoulboundToken',
+
+  // CrowdVCTreasury errors
+  InvalidRecipient: 'InvalidRecipient',
+  InsufficientBalance: 'InsufficientBalance',
+  NativeTransferFailed: 'NativeTransferFailed',
+  InsufficientTokenBalance: 'InsufficientTokenBalance',
+  NoTokensToRescue: 'NoTokensToRescue',
+
   // ValidationLib errors
-  INVALID_ADDRESS: "InvalidAddress",
-  INVALID_STRING: "InvalidString",
-  INVALID_AMOUNT: "InvalidAmount",
-  AMOUNT_BELOW_MINIMUM: "AmountBelowMinimum",
-  AMOUNT_ABOVE_MAXIMUM: "AmountAboveMaximum",
-  DURATION_TOO_SHORT: "DurationTooShort",
-  DURATION_TOO_LONG: "DurationTooLong",
+  InvalidAddress: 'InvalidAddress',
+  InvalidAmount: 'InvalidAmount',
+  InvalidString: 'InvalidString',
+  InvalidDuration: 'InvalidDuration',
+  DeadlineInPast: 'DeadlineInPast',
+  EmptyArray: 'EmptyArray',
 
-  // FeeCalculator errors
-  FEE_TOO_HIGH: "FeeTooHigh",
+  // AccessControl error
+  AccessControlUnauthorizedAccount: 'AccessControlUnauthorizedAccount',
 
-  // Common AccessControl errors
-  ACCESS_DENIED: "AccessControl",
-  UNAUTHORIZED: "Unauthorized",
+  // Pausable errors
+  EnforcedPause: 'EnforcedPause',
+  ExpectedPause: 'ExpectedPause',
+
+  // Ownable errors
+  OwnableUnauthorizedAccount: 'OwnableUnauthorizedAccount',
+  OwnableInvalidOwner: 'OwnableInvalidOwner',
 } as const;
+
+// ============ ZERO ADDRESS ============
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
+
+// ============ MILESTONE CONSTANTS ============
+
+/** Standard milestone structure for testing */
+export const DEFAULT_MILESTONES = [
+  {
+    description: 'Phase 1: Product Development',
+    fundingPercent: 3000n, // 30%
+    deadline: 0n, // Will be set dynamically
+    completed: false,
+    disputed: false,
+    evidenceURI: '',
+    approvalCount: 0n,
+    approvalsNeeded: 0n,
+  },
+  {
+    description: 'Phase 2: Market Launch',
+    fundingPercent: 4000n, // 40%
+    deadline: 0n,
+    completed: false,
+    disputed: false,
+    evidenceURI: '',
+    approvalCount: 0n,
+    approvalsNeeded: 0n,
+  },
+  {
+    description: 'Phase 3: Scale Operations',
+    fundingPercent: 3000n, // 30%
+    deadline: 0n,
+    completed: false,
+    disputed: false,
+    evidenceURI: '',
+    approvalCount: 0n,
+    approvalsNeeded: 0n,
+  },
+];

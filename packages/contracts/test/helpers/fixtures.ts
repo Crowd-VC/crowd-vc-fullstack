@@ -1,442 +1,556 @@
-import { network } from "hardhat";
-import hre from "hardhat";
-import { Address, keccak256, toHex } from "viem";
-
-// Get viem instance from network connection
-const getViem = async () => {
-  const connection = await network.connect();
-  return connection.viem;
-};
-
 /**
- * Deploys mock USDT and USDC tokens for testing
- * @returns Mock token contract instances and addresses
+ * Test Fixtures for CrowdVC Platform Tests
+ *
+ * This file contains reusable fixtures for deploying contracts
+ * and setting up test state. Uses Hardhat 3.0's networkHelpers.loadFixture
+ * for snapshot-based test isolation.
+ *
+ * Compatible with Hardhat 3.0 + node:test + viem
  */
-export async function deployMockTokensFixture() {
-  const viem = await getViem();
-  const usdt = await viem.deployContract("MockUSDT");
-  const usdc = await viem.deployContract("MockUSDC");
 
-  return {
-    usdt,
-    usdc,
-    usdtAddress: usdt.address,
-    usdcAddress: usdc.address,
-  };
+import hre from 'hardhat';
+import { getAddress } from 'viem';
+import {
+  DEFAULT_PLATFORM_FEE,
+  DEFAULT_METADATA_URI,
+  DEFAULT_PITCH_TITLE,
+  DEFAULT_PITCH_IPFS,
+  DEFAULT_PITCH_FUNDING_GOAL,
+  DEFAULT_POOL_NAME,
+  DEFAULT_POOL_CATEGORY,
+  DEFAULT_POOL_ID,
+  DEFAULT_POOL_FUNDING_GOAL,
+  DEFAULT_VOTING_DURATION,
+  DEFAULT_FUNDING_DURATION,
+  DEFAULT_MIN_CONTRIBUTION,
+  DEFAULT_MAX_CONTRIBUTION,
+  MINT_AMOUNT,
+  MEDIUM_CONTRIBUTION,
+  LARGE_CONTRIBUTION,
+  UserType,
+  PitchStatus,
+  ONE_DAY,
+  BASIS_POINTS,
+} from './constants.js';
+
+// ============ TYPE DEFINITIONS ============
+
+export type WalletClient = Awaited<ReturnType<typeof hre.viem.getWalletClients>>[number];
+export type PublicClient = Awaited<ReturnType<typeof hre.viem.getPublicClient>>;
+export type Contract = Awaited<ReturnType<typeof hre.viem.deployContract>>;
+
+export interface FixtureResult {
+  factory: Contract;
+  poolImplementation: Contract;
+  treasury: Contract;
+  usdt: Contract;
+  usdc: Contract;
+  owner: WalletClient;
+  admin: WalletClient;
+  startup1: WalletClient;
+  startup2: WalletClient;
+  startup3: WalletClient;
+  investor1: WalletClient;
+  investor2: WalletClient;
+  investor3: WalletClient;
+  treasuryWallet: WalletClient;
+  unauthorized: WalletClient;
+  publicClient: PublicClient;
 }
 
+// ============ BASE FIXTURE ============
+
 /**
- * Deploys the CrowdVCFactory contract with mock tokens
- * Initializes factory with treasury, platform fee, and supported tokens
- * @returns Factory contract, tokens, and relevant addresses
+ * Base fixture that deploys all contracts with default configuration.
+ * This is the foundation for all other fixtures.
  */
-export async function deployFactoryFixture() {
-  const viem = await getViem();
-  const [admin, treasury, ...others] = await viem.getWalletClients();
+export async function deployFactoryFixture(): Promise<FixtureResult> {
+  const { viem } = await hre.network.connect();
+
+  // Get wallet clients (test accounts)
+  const walletClients = await viem.getWalletClients();
+  const [
+    owner,
+    admin,
+    startup1,
+    startup2,
+    startup3,
+    investor1,
+    investor2,
+    investor3,
+    treasuryWallet,
+    unauthorized,
+  ] = walletClients;
+
+  // Get public client for reading state
   const publicClient = await viem.getPublicClient();
 
-  // Deploy mock tokens
-  const { usdt, usdc, usdtAddress, usdcAddress } =
-    await deployMockTokensFixture();
-
-  // Deploy CrowdVCFactory
-  const factory = await viem.deployContract("CrowdVCFactory");
-
-  // Initialize factory with treasury, platform fee (500 basis points = 5%), and supported tokens
-  const platformFee = 500; // 5%
-  await factory.write.initialize([
-    treasury.account.address,
-    platformFee,
-    [usdtAddress, usdcAddress],
+  // Deploy Treasury contract
+  const treasury = await viem.deployContract('CrowdVCTreasury', [
+    getAddress(treasuryWallet.account.address),
   ]);
 
-  // Verify initialization
-  const retrievedPlatformFee = await factory.read.platformFeePercent();
-  const retrievedTreasury = await factory.read.treasury();
-  const isUsdtSupported = await factory.read.isSupportedToken([usdtAddress]);
-  const isUsdcSupported = await factory.read.isSupportedToken([usdcAddress]);
+  // Deploy mock tokens
+  const usdt = await viem.deployContract('MockUSDT');
+  const usdc = await viem.deployContract('MockUSDC');
 
-  if (retrievedPlatformFee !== BigInt(platformFee)) {
-    throw new Error("Platform fee not set correctly");
-  }
-  if (retrievedTreasury !== treasury.account.address) {
-    throw new Error("Treasury not set correctly");
-  }
-  if (!isUsdtSupported || !isUsdcSupported) {
-    throw new Error("Tokens not registered correctly");
-  }
+  // Deploy pool implementation (used for cloning)
+  const poolImplementation = await viem.deployContract('CrowdVCPool');
+
+  // Deploy factory with treasury contract address
+  const factory = await viem.deployContract('CrowdVCFactory', [
+    poolImplementation.address,
+    treasury.address,
+    DEFAULT_PLATFORM_FEE,
+    usdt.address,
+    usdc.address,
+  ]);
 
   return {
     factory,
+    poolImplementation,
+    treasury,
     usdt,
     usdc,
-    usdtAddress,
-    usdcAddress,
+    owner,
     admin,
-    treasury,
-    others,
+    startup1,
+    startup2,
+    startup3,
+    investor1,
+    investor2,
+    investor3,
+    treasuryWallet,
+    unauthorized,
     publicClient,
   };
 }
 
+// ============ FIXTURE WITH REGISTERED USERS ============
+
+export interface FixtureWithUsersResult extends FixtureResult {
+  startup1Address: `0x${string}`;
+  startup2Address: `0x${string}`;
+  investor1Address: `0x${string}`;
+  investor2Address: `0x${string}`;
+}
+
 /**
- * Registers multiple startup and investor users
- * Builds on deployFactoryFixture
- * @returns Factory, tokens, and arrays of registered user addresses
+ * Fixture with pre-registered users (startups and investors).
  */
-export async function registerUsersFixture() {
-  const fixtureData = await deployFactoryFixture();
-  const { factory, others } = fixtureData;
+export async function fixtureWithUsers(): Promise<FixtureWithUsersResult> {
+  const base = await deployFactoryFixture();
+  const { factory, startup1, startup2, investor1, investor2 } = base;
 
-  // Get test accounts for startups and investors
-  const [startup1, startup2, startup3, investor1, investor2, investor3] =
-    others;
+  // Register startup1
+  await factory.write.registerUser([UserType.Startup, DEFAULT_METADATA_URI], {
+    account: startup1.account,
+  });
 
-  // Register startups (UserType.Startup = 1)
-  const startupMetadataURI = "ipfs://QmStartupMetadata";
-  await factory.write.registerUser(
-    [1, startupMetadataURI],
+  // Register startup2
+  await factory.write.registerUser([UserType.Startup, DEFAULT_METADATA_URI], {
+    account: startup2.account,
+  });
+
+  // Register investor1
+  await factory.write.registerUser([UserType.Investor, DEFAULT_METADATA_URI], {
+    account: investor1.account,
+  });
+
+  // Register investor2
+  await factory.write.registerUser([UserType.Investor, DEFAULT_METADATA_URI], {
+    account: investor2.account,
+  });
+
+  return {
+    ...base,
+    startup1Address: getAddress(startup1.account.address),
+    startup2Address: getAddress(startup2.account.address),
+    investor1Address: getAddress(investor1.account.address),
+    investor2Address: getAddress(investor2.account.address),
+  };
+}
+
+// ============ FIXTURE WITH PITCHES ============
+
+export interface FixtureWithPitchesResult extends FixtureWithUsersResult {
+  pitch1Id: `0x${string}`;
+  pitch2Id: `0x${string}`;
+  pitch3Id: `0x${string}`;
+}
+
+/**
+ * Fixture with registered users and submitted pitches.
+ */
+export async function fixtureWithPitches(): Promise<FixtureWithPitchesResult> {
+  const base = await fixtureWithUsers();
+  const { factory, startup1, startup2, startup3, publicClient } = base;
+
+  // Register startup3
+  await factory.write.registerUser([UserType.Startup, DEFAULT_METADATA_URI], {
+    account: startup3.account,
+  });
+
+  // Submit pitch from startup1
+  const hash1 = await factory.write.submitPitch(
+    [DEFAULT_PITCH_TITLE, DEFAULT_PITCH_IPFS, DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup1.account }
   );
-  await factory.write.registerUser(
-    [1, startupMetadataURI],
+  await publicClient.waitForTransactionReceipt({ hash: hash1 });
+  const logs1 = await factory.getEvents.PitchSubmitted();
+  const pitch1Id = logs1[0].args.pitchId as `0x${string}`;
+
+  // Submit pitch from startup2
+  const hash2 = await factory.write.submitPitch(
+    ['Second Startup Pitch', 'ipfs://QmSecondPitch', DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup2.account }
   );
-  await factory.write.registerUser(
-    [1, startupMetadataURI],
+  await publicClient.waitForTransactionReceipt({ hash: hash2 });
+  const logs2 = await factory.getEvents.PitchSubmitted();
+  const pitch2Id = logs2[1].args.pitchId as `0x${string}`;
+
+  // Submit pitch from startup3
+  const hash3 = await factory.write.submitPitch(
+    ['Third Startup Pitch', 'ipfs://QmThirdPitch', DEFAULT_PITCH_FUNDING_GOAL],
     { account: startup3.account }
   );
-
-  // Register investors (UserType.Investor = 2)
-  const investorMetadataURI = "ipfs://QmInvestorMetadata";
-  await factory.write.registerUser(
-    [2, investorMetadataURI],
-    { account: investor1.account }
-  );
-  await factory.write.registerUser(
-    [2, investorMetadataURI],
-    { account: investor2.account }
-  );
-  await factory.write.registerUser(
-    [2, investorMetadataURI],
-    { account: investor3.account }
-  );
-
-  // Verify roles are granted correctly
-  const STARTUP_ROLE = await factory.read.STARTUP_ROLE();
-  const INVESTOR_ROLE = await factory.read.INVESTOR_ROLE();
-
-  const hasStartup1Role = await factory.read.hasRole([
-    STARTUP_ROLE,
-    startup1.account.address,
-  ]);
-  const hasInvestor1Role = await factory.read.hasRole([
-    INVESTOR_ROLE,
-    investor1.account.address,
-  ]);
-
-  if (!hasStartup1Role || !hasInvestor1Role) {
-    throw new Error("Roles not granted correctly");
-  }
+  await publicClient.waitForTransactionReceipt({ hash: hash3 });
+  const logs3 = await factory.getEvents.PitchSubmitted();
+  const pitch3Id = logs3[2].args.pitchId as `0x${string}`;
 
   return {
-    ...fixtureData,
-    startups: [startup1, startup2, startup3],
-    investors: [investor1, investor2, investor3],
+    ...base,
+    pitch1Id,
+    pitch2Id,
+    pitch3Id,
   };
 }
 
+// ============ FIXTURE WITH APPROVED PITCHES ============
+
 /**
- * Submits and approves pitches from registered startups
- * Builds on registerUsersFixture
- * @returns Factory, tokens, users, and array of approved pitch IDs
+ * Fixture with pitches that have been approved by admin.
  */
-export async function submitPitchesFixture() {
-  const fixtureData = await registerUsersFixture();
-  const { factory, admin, startups } = fixtureData;
+export async function fixtureWithApprovedPitches(): Promise<FixtureWithPitchesResult> {
+  const base = await fixtureWithPitches();
+  const { factory, owner, pitch1Id, pitch2Id, pitch3Id } = base;
 
-  const pitchIds: `0x${string}`[] = [];
-
-  // Startup 1 submits pitch
-  const pitch1Title = "AI-Powered Analytics Platform";
-  const pitch1IpfsHash = "QmPitch1Hash";
-  const pitch1FundingGoal = BigInt(50000 * 1e6); // 50,000 USDT (6 decimals)
-
-  const tx1 = await factory.write.submitPitch(
-    [pitch1Title, pitch1IpfsHash, pitch1FundingGoal],
-    { account: startups[0].account }
-  );
-  const receipt1 = await fixtureData.publicClient.waitForTransactionReceipt({
-    hash: tx1,
+  // Approve pitch1 (owner is admin by default)
+  await factory.write.updatePitchStatus([pitch1Id, PitchStatus.Approved], {
+    account: owner.account,
   });
-  // Get event topic by calculating keccak256 hash of the event signature
-  const pitchSubmittedEventAbi = factory.abi.find((item: any) => item.name === "PitchSubmitted");
-  const pitchSubmittedTopic = pitchSubmittedEventAbi
-    ? keccak256(toHex(`${pitchSubmittedEventAbi.name}(${pitchSubmittedEventAbi.inputs.map((i: any) => i.type).join(',')})`))
-    : undefined;
-  const pitchSubmittedEvent1 = receipt1.logs.find(
-    (log) => log.topics[0] === pitchSubmittedTopic
-  );
-  if (pitchSubmittedEvent1) {
-    pitchIds.push(pitchSubmittedEvent1.topics[1] as `0x${string}`);
-  }
 
-  // Startup 2 submits pitch
-  const pitch2Title = "Blockchain Supply Chain Solution";
-  const pitch2IpfsHash = "QmPitch2Hash";
-  const pitch2FundingGoal = BigInt(75000 * 1e6); // 75,000 USDT
-
-  const tx2 = await factory.write.submitPitch(
-    [pitch2Title, pitch2IpfsHash, pitch2FundingGoal],
-    { account: startups[1].account }
-  );
-  const receipt2 = await fixtureData.publicClient.waitForTransactionReceipt({
-    hash: tx2,
+  // Approve pitch2
+  await factory.write.updatePitchStatus([pitch2Id, PitchStatus.Approved], {
+    account: owner.account,
   });
-  const pitchSubmittedEvent2 = receipt2.logs.find(
-    (log) => log.topics[0] === pitchSubmittedTopic
-  );
-  if (pitchSubmittedEvent2) {
-    pitchIds.push(pitchSubmittedEvent2.topics[1] as `0x${string}`);
-  }
 
-  // Startup 3 submits pitch
-  const pitch3Title = "Green Energy Marketplace";
-  const pitch3IpfsHash = "QmPitch3Hash";
-  const pitch3FundingGoal = BigInt(60000 * 1e6); // 60,000 USDT
-
-  const tx3 = await factory.write.submitPitch(
-    [pitch3Title, pitch3IpfsHash, pitch3FundingGoal],
-    { account: startups[2].account }
-  );
-  const receipt3 = await fixtureData.publicClient.waitForTransactionReceipt({
-    hash: tx3,
+  // Approve pitch3
+  await factory.write.updatePitchStatus([pitch3Id, PitchStatus.Approved], {
+    account: owner.account,
   });
-  const pitchSubmittedEvent3 = receipt3.logs.find(
-    (log) => log.topics[0] === pitchSubmittedTopic
-  );
-  if (pitchSubmittedEvent3) {
-    pitchIds.push(pitchSubmittedEvent3.topics[1] as `0x${string}`);
-  }
 
-  // Admin approves all pitches (PitchStatus.Approved = 2)
-  for (const pitchId of pitchIds) {
-    await factory.write.updatePitchStatus([pitchId, 2], {
-      account: admin.account,
-    });
+  return base;
+}
 
-    // Verify pitch status
-    const isApproved = await factory.read.isPitchApproved([pitchId]);
-    if (!isApproved) {
-      throw new Error(`Pitch ${pitchId} not approved correctly`);
-    }
-  }
+// ============ FIXTURE WITH POOL ============
 
-  return {
-    ...fixtureData,
-    pitchIds,
-  };
+export interface FixtureWithPoolResult extends FixtureWithPitchesResult {
+  poolAddress: `0x${string}`;
+  pool: Contract;
 }
 
 /**
- * Creates a pool with approved pitches as candidates
- * Builds on submitPitchesFixture
- * @returns Factory, pool contract, tokens, users, and pitch IDs
+ * Fixture with an active pool containing approved pitches.
  */
-export async function deployPoolFixture() {
-  const fixtureData = await submitPitchesFixture();
-  const { factory, admin, usdtAddress, pitchIds, publicClient } = fixtureData;
+export async function fixtureWithPool(): Promise<FixtureWithPoolResult> {
+  const base = await fixtureWithApprovedPitches();
+  const {
+    factory,
+    owner,
+    usdt,
+    pitch1Id,
+    pitch2Id,
+    pitch3Id,
+    publicClient,
+    startup1,
+    startup2,
+    startup3,
+  } = base;
 
-  // Pool parameters
-  const poolName = "Q1 2025 Innovation Pool";
-  const category = "Technology";
-  const fundingGoal = BigInt(150000 * 1e6); // 150,000 USDT (6 decimals)
-  const votingDuration = BigInt(7 * 24 * 60 * 60); // 7 days in seconds
-  const fundingDuration = BigInt(30 * 24 * 60 * 60); // 30 days in seconds
-  const candidatePitches = pitchIds;
-  const acceptedToken = usdtAddress;
-  const minContribution = BigInt(100 * 1e6); // 100 USDT minimum
+  const { viem } = await hre.network.connect();
 
-  // Admin creates pool
-  const tx = await factory.write.createPool(
-    [
-      poolName,
-      category,
-      fundingGoal,
-      votingDuration,
-      fundingDuration,
-      candidatePitches,
-      acceptedToken,
-      minContribution,
-    ],
-    { account: admin.account }
-  );
+  // Create pool with approved pitches
+  const poolParams = {
+    poolId: DEFAULT_POOL_ID,
+    name: DEFAULT_POOL_NAME,
+    category: DEFAULT_POOL_CATEGORY,
+    fundingGoal: DEFAULT_POOL_FUNDING_GOAL,
+    votingDuration: DEFAULT_VOTING_DURATION,
+    fundingDuration: DEFAULT_FUNDING_DURATION,
+    candidatePitches: [pitch1Id, pitch2Id, pitch3Id],
+    acceptedToken: usdt.address,
+    minContribution: DEFAULT_MIN_CONTRIBUTION,
+    maxContribution: DEFAULT_MAX_CONTRIBUTION,
+  };
 
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-
-  // Extract pool address from PoolCreated event
-  const poolCreatedEventAbi = factory.abi.find((item: any) => item.name === "PoolCreated");
-  const poolCreatedTopic = poolCreatedEventAbi
-    ? keccak256(toHex(`${poolCreatedEventAbi.name}(${poolCreatedEventAbi.inputs.map((i: any) => i.type).join(',')})`))
-    : undefined;
-  const poolCreatedEvent = receipt.logs.find(
-    (log) => log.topics[0] === poolCreatedTopic
-  );
-
-  if (!poolCreatedEvent) {
-    throw new Error("PoolCreated event not found");
-  }
-
-  const poolAddress = `0x${poolCreatedEvent.topics[1]?.slice(26)}` as Address;
+  const hash = await factory.write.createPool([poolParams], {
+    account: owner.account,
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  const logs = await factory.getEvents.PoolDeployed();
+  const poolAddress = logs[0].args.poolAddress as `0x${string}`;
 
   // Get pool contract instance
-  const viem = await getViem();
-  const pool = await viem.getContractAt("CrowdVCPool", poolAddress);
+  const pool = await viem.getContractAt('CrowdVCPool', poolAddress);
 
-  // Verify pool is initialized
-  const poolInfo = await pool.read.getPoolInfo();
-  if (poolInfo[0] !== poolName) {
-    throw new Error("Pool not initialized correctly");
-  }
+  // Add startups to pool with their wallet addresses
+  await factory.write.addStartupToPool(
+    [poolAddress, pitch1Id, getAddress(startup1.account.address)],
+    { account: owner.account }
+  );
 
-  // Verify pool status is Active (0)
-  if (poolInfo[7] !== 0) {
-    throw new Error("Pool status is not Active");
-  }
+  await factory.write.addStartupToPool(
+    [poolAddress, pitch2Id, getAddress(startup2.account.address)],
+    { account: owner.account }
+  );
+
+  await factory.write.addStartupToPool(
+    [poolAddress, pitch3Id, getAddress(startup3.account.address)],
+    { account: owner.account }
+  );
 
   return {
-    ...fixtureData,
-    pool,
+    ...base,
     poolAddress,
-    poolConfig: {
-      poolName,
-      category,
-      fundingGoal,
-      votingDuration,
-      fundingDuration,
-      minContribution,
-    },
+    pool,
+  };
+}
+
+// ============ FIXTURE WITH FUNDED INVESTORS ============
+
+/**
+ * Fixture with a pool and investors who have tokens minted and approved.
+ */
+export async function fixtureWithFundedInvestors(): Promise<FixtureWithPoolResult> {
+  const base = await fixtureWithPool();
+  const { usdt, investor1, investor2, investor3, poolAddress, owner } = base;
+
+  // Mint tokens to investors
+  await usdt.write.mint([getAddress(investor1.account.address), MINT_AMOUNT], {
+    account: owner.account,
+  });
+  await usdt.write.mint([getAddress(investor2.account.address), MINT_AMOUNT], {
+    account: owner.account,
+  });
+  await usdt.write.mint([getAddress(investor3.account.address), MINT_AMOUNT], {
+    account: owner.account,
+  });
+
+  // Approve pool to spend tokens
+  await usdt.write.approve([poolAddress, MINT_AMOUNT], {
+    account: investor1.account,
+  });
+  await usdt.write.approve([poolAddress, MINT_AMOUNT], {
+    account: investor2.account,
+  });
+  await usdt.write.approve([poolAddress, MINT_AMOUNT], {
+    account: investor3.account,
+  });
+
+  return base;
+}
+
+// ============ FIXTURE WITH CONTRIBUTIONS ============
+
+export interface FixtureWithContributionsResult extends FixtureWithPoolResult {
+  investor1TokenId: bigint;
+  investor2TokenId: bigint;
+  investor3TokenId: bigint;
+  investor1Contribution: bigint;
+  investor2Contribution: bigint;
+  investor3Contribution: bigint;
+}
+
+/**
+ * Fixture with a pool where investors have already contributed.
+ */
+export async function fixtureWithContributions(): Promise<FixtureWithContributionsResult> {
+  const base = await fixtureWithFundedInvestors();
+  const { pool, usdt, investor1, investor2, investor3, publicClient } = base;
+
+  // Define contribution amounts
+  const investor1Contribution = LARGE_CONTRIBUTION; // 10,000 USDC
+  const investor2Contribution = MEDIUM_CONTRIBUTION; // 1,000 USDC
+  const investor3Contribution = MEDIUM_CONTRIBUTION; // 1,000 USDC
+
+  // Investor1 contributes
+  const hash1 = await pool.write.contribute([investor1Contribution, usdt.address], {
+    account: investor1.account,
+  });
+  await publicClient.waitForTransactionReceipt({ hash: hash1 });
+  const logs1 = await pool.getEvents.ContributionMade();
+  const investor1TokenId = logs1[0].args.tokenId as bigint;
+
+  // Investor2 contributes
+  const hash2 = await pool.write.contribute([investor2Contribution, usdt.address], {
+    account: investor2.account,
+  });
+  await publicClient.waitForTransactionReceipt({ hash: hash2 });
+  const logs2 = await pool.getEvents.ContributionMade();
+  const investor2TokenId = logs2[1].args.tokenId as bigint;
+
+  // Investor3 contributes
+  const hash3 = await pool.write.contribute([investor3Contribution, usdt.address], {
+    account: investor3.account,
+  });
+  await publicClient.waitForTransactionReceipt({ hash: hash3 });
+  const logs3 = await pool.getEvents.ContributionMade();
+  const investor3TokenId = logs3[2].args.tokenId as bigint;
+
+  return {
+    ...base,
+    investor1TokenId,
+    investor2TokenId,
+    investor3TokenId,
+    investor1Contribution,
+    investor2Contribution,
+    investor3Contribution,
+  };
+}
+
+// ============ FIXTURE WITH VOTES ============
+
+export interface FixtureWithVotesResult extends FixtureWithContributionsResult {}
+
+/**
+ * Fixture with a pool where investors have contributed and voted.
+ */
+export async function fixtureWithVotes(): Promise<FixtureWithVotesResult> {
+  const base = await fixtureWithContributions();
+  const { pool, investor1, investor2, investor3, pitch1Id, pitch2Id, pitch3Id } = base;
+
+  // Investor1 votes for pitch1 and pitch2
+  await pool.write.vote([pitch1Id], { account: investor1.account });
+  await pool.write.vote([pitch2Id], { account: investor1.account });
+
+  // Investor2 votes for pitch1
+  await pool.write.vote([pitch1Id], { account: investor2.account });
+
+  // Investor3 votes for pitch3
+  await pool.write.vote([pitch3Id], { account: investor3.account });
+
+  return base;
+}
+
+// ============ FIXTURE WITH VOTING ENDED ============
+
+export interface FixtureWithVotingEndedResult extends FixtureWithVotesResult {
+  winners: readonly any[];
+}
+
+/**
+ * Fixture with voting ended and winners determined.
+ */
+export async function fixtureWithVotingEnded(): Promise<FixtureWithVotingEndedResult> {
+  const base = await fixtureWithVotes();
+  const { pool, factory, publicClient } = base;
+  const { networkHelpers } = await hre.network.connect();
+
+  // Fast forward past voting deadline
+  const votingDeadline = await pool.read.votingDeadline();
+  await networkHelpers.time.increaseTo(votingDeadline + 1n);
+
+  // End voting (called via factory's admin role on pool)
+  await pool.write.endVoting({ account: base.owner.account });
+
+  // Get winners
+  const winners = await pool.read.getWinners();
+
+  return {
+    ...base,
+    winners,
+  };
+}
+
+// ============ HELPER FUNCTIONS FOR FIXTURES ============
+
+/**
+ * Create pool parameters with custom overrides.
+ */
+export function createPoolParams(
+  overrides: Partial<{
+    poolId: string;
+    name: string;
+    category: string;
+    fundingGoal: bigint;
+    votingDuration: bigint;
+    fundingDuration: bigint;
+    candidatePitches: `0x${string}`[];
+    acceptedToken: `0x${string}`;
+    minContribution: bigint;
+    maxContribution: bigint;
+  }> = {}
+) {
+  return {
+    poolId: overrides.poolId ?? DEFAULT_POOL_ID,
+    name: overrides.name ?? DEFAULT_POOL_NAME,
+    category: overrides.category ?? DEFAULT_POOL_CATEGORY,
+    fundingGoal: overrides.fundingGoal ?? DEFAULT_POOL_FUNDING_GOAL,
+    votingDuration: overrides.votingDuration ?? DEFAULT_VOTING_DURATION,
+    fundingDuration: overrides.fundingDuration ?? DEFAULT_FUNDING_DURATION,
+    candidatePitches: overrides.candidatePitches ?? [],
+    acceptedToken:
+      overrides.acceptedToken ??
+      ('0x0000000000000000000000000000000000000000' as `0x${string}`),
+    minContribution: overrides.minContribution ?? DEFAULT_MIN_CONTRIBUTION,
+    maxContribution: overrides.maxContribution ?? DEFAULT_MAX_CONTRIBUTION,
   };
 }
 
 /**
- * Creates an active pool with contributions and votes
- * Builds on deployPoolFixture
- * @returns Factory, pool, tokens, users, pitches, and contribution details
+ * Create milestone parameters for testing.
  */
-export async function createActivePoolFixture() {
-  const fixtureData = await deployPoolFixture();
-  const {
-    pool,
-    usdt,
-    investors,
-    pitchIds,
-    poolConfig: { minContribution },
-    publicClient,
-  } = fixtureData;
+export function createMilestones(
+  count: number = 3,
+  deadline: bigint = BigInt(Math.floor(Date.now() / 1000)) + 30n * ONE_DAY
+) {
+  const milestones = [];
+  const percentPerMilestone = Math.floor(10000 / count);
+  let totalPercent = 0;
 
-  const contributions: Array<{
-    investor: Address;
-    amount: bigint;
-    tokenId: bigint;
-  }> = [];
+  for (let i = 0; i < count; i++) {
+    const isLast = i === count - 1;
+    const percent = isLast ? 10000 - totalPercent : percentPerMilestone;
+    totalPercent += percent;
 
-  // Mint tokens to investors and have them contribute
-  for (let i = 0; i < investors.length; i++) {
-    const investor = investors[i];
-    const amount = minContribution * BigInt(i + 2); // 2x, 3x, 4x min contribution
-
-    // Mint tokens to investor
-    await usdt.write.mint([investor.account.address, amount]);
-
-    // Approve pool to spend tokens
-    await usdt.write.approve([pool.address, amount], {
-      account: investor.account,
-    });
-
-    // Contribute to pool (new signature: amount, token)
-    const tx = await pool.write.contribute([amount, usdt.address], {
-      account: investor.account,
-    });
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-
-    // Extract NFT token ID from event
-    const contributionEventAbi = pool.abi.find((item: any) => item.name === "ContributionReceived");
-    const contributionTopic = contributionEventAbi
-      ? keccak256(toHex(`${contributionEventAbi.name}(${contributionEventAbi.inputs.map((i: any) => i.type).join(',')})`))
-      : undefined;
-    const contributionEvent = receipt.logs.find(
-      (log) => log.topics[0] === contributionTopic
-    );
-
-    let tokenId = BigInt(0);
-    if (contributionEvent) {
-      // TokenId is typically the 3rd indexed parameter
-      tokenId = BigInt(contributionEvent.topics[3] || 0);
-    }
-
-    contributions.push({
-      investor: investor.account.address,
-      amount,
-      tokenId,
+    milestones.push({
+      description: `Milestone ${i + 1}`,
+      fundingPercent: BigInt(percent),
+      deadline: deadline + BigInt(i) * ONE_DAY,
+      completed: false,
+      disputed: false,
+      evidenceURI: '',
+      approvalCount: 0n,
+      approvalsNeeded: 0n,
     });
   }
 
-  // Have investors vote for different pitches
-  const votes: Array<{ voter: Address; pitchId: `0x${string}` }> = [];
-
-  // Investor 1 votes for pitch 1
-  await pool.write.vote([pitchIds[0]], { account: investors[0].account });
-  votes.push({ voter: investors[0].account.address, pitchId: pitchIds[0] });
-
-  // Investor 2 votes for pitch 2
-  await pool.write.vote([pitchIds[1]], { account: investors[1].account });
-  votes.push({ voter: investors[1].account.address, pitchId: pitchIds[1] });
-
-  // Investor 3 votes for pitch 1 (same as investor 1)
-  await pool.write.vote([pitchIds[0]], { account: investors[2].account });
-  votes.push({ voter: investors[2].account.address, pitchId: pitchIds[0] });
-
-  return {
-    ...fixtureData,
-    contributions,
-    votes,
-  };
+  return milestones;
 }
 
 /**
- * Creates a pool where voting has ended
- * Builds on createActivePoolFixture and advances time past voting deadline
- * @returns Factory, pool, tokens, users, and all state data
+ * Get a pool contract instance at a given address.
  */
-export async function createPoolWithVotingEndedFixture() {
-  const fixtureData = await createActivePoolFixture();
-  const {
-    pool,
-    admin,
-    poolConfig: { votingDuration },
-  } = fixtureData;
+export async function getPoolContract(address: `0x${string}`) {
+  const { viem } = await hre.network.connect();
+  return viem.getContractAt('CrowdVCPool', address);
+}
 
-  // Advance time past voting deadline
-  await hre.network.provider.send("evm_increaseTime", [
-    Number(votingDuration) + 1,
-  ]);
-  await hre.network.provider.send("evm_mine");
-
-  // Admin ends voting
-  await pool.write.endVoting({ account: admin.account });
-
-  // Verify pool status has transitioned
-  const poolInfo = await pool.read.getPoolInfo();
-  const status = poolInfo[7];
-
-  // Status should be VotingEnded (1) or Funded (2) depending on whether funding goal was met
-  if (status !== 1 && status !== 2) {
-    throw new Error("Pool status did not transition correctly after ending voting");
-  }
-
-  return {
-    ...fixtureData,
-  };
+/**
+ * Get the network helpers for time manipulation etc.
+ */
+export async function getNetworkHelpers() {
+  const { networkHelpers } = await hre.network.connect();
+  return networkHelpers;
 }
