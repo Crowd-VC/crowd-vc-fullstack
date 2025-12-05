@@ -123,7 +123,7 @@ export const defaultMenuItems = [
     ],
   },
   {
-    name: 'Settings',
+    name: 'Profile',
     icon: <ProfileIcon />,
     href: routes.profile,
   },
