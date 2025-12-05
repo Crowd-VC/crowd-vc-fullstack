@@ -9,7 +9,8 @@
     "DATABASE_URL",
     "PINATA_KEY",
     "PINATA_API_KEY",
-    "PINATA_JWT_TOKEN"
+    "PINATA_JWT_TOKEN",
+    "NEXT_PUBLIC_PINATA_GATEWAY"
   ],
   "tasks": {
     "build": {

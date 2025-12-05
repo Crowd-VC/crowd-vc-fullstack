@@ -3,7 +3,7 @@
 import { PinataSDK } from "pinata";
 
 const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT!,
+  pinataJwt: process.env.PINATA_JWT_TOKEN,
   pinataGateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
 });
 
@@ -28,14 +28,21 @@ export async function uploadPitch(formData: FormData) {
       imageCid = imageUpload.cid;
     }
 
+    // Generate signed URL for the image if it exists
+    let imageUrl: string | undefined;
+    if (imageCid) {
+      imageUrl = await pinata.gateways.createSignedURL({
+        cid: imageCid,
+        expires: 31536000, // 1 year in seconds
+      });
+    }
+
     // Add file CIDs to metadata
     const finalMetadata = {
       ...metadata,
       fileCid: fileUpload.cid,
       imageCid: imageCid,
-      imageUrl: imageCid
-        ? `https://gateway.pinata.cloud/ipfs/${imageCid}`
-        : undefined,
+      imageUrl: imageUrl,
     };
 
     // Upload metadata JSON
