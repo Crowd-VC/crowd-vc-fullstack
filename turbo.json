@@ -6,7 +6,10 @@
     "PRIVY_APP_SECRET",
     "RESEND_API_KEY",
     "STACK_SECRET_SERVER_KEY",
-    "DATABASE_URL"
+    "DATABASE_URL",
+    "PINATA_KEY",
+    "PINATA_API_KEY",
+    "PINATA_JWT_TOKEN"
   ],
   "tasks": {
     "build": {
