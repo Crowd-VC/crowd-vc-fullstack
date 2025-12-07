@@ -290,8 +290,12 @@ contract CrowdVCFactory is
         if (!supportedTokens[params.acceptedToken]) revert TokenNotSupported();
         if (params.maxContribution != 0 && params.maxContribution < params.minContribution) revert InvalidMaxContribution();
 
-        // Deploy new pool contract using minimal proxy (ERC-1167)
-        address poolAddress = Clones.clone(poolImplementation);
+        // Deploy new pool contract using minimal proxy with immutable args (ERC-1167)
+        // Factory address is embedded in clone bytecode for gas-efficient access
+        address poolAddress = Clones.cloneWithImmutableArgs(
+            poolImplementation,
+            abi.encode(address(this))
+        );
         CrowdVCPool pool = CrowdVCPool(poolAddress);
 
         ICrowdVCPool.PoolConfig memory config = ICrowdVCPool.PoolConfig({
@@ -309,7 +313,7 @@ contract CrowdVCFactory is
             treasury: treasury
         });
 
-        pool.initialize(address(this), config);
+        pool.initialize(config);
 
         _isPools[poolAddress] = true;
         _allPools.push(poolAddress);

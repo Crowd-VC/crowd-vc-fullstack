@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { getUSDTAddress, getUSDCAddress } from '@/lib/web3/config/contracts';
-import { Loader2, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Wallet, AlertCircle } from 'lucide-react';
 import { DECIMALS } from '@/lib/web3/utils/constants';
 
 interface CreatePoolModalProps {
@@ -101,6 +101,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   };
 
   // Check if form has minimum required data for simulation
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const isFormValidForSimulation = useMemo(() => {
     const fundingGoal = Number(formData.fundingGoal);
     const minContribution = Number(formData.minContribution);
@@ -119,6 +120,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   }, [formData, isConnected]);
 
   // Build contract params for simulation
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const contractParams: CreatePoolContractParams | undefined = useMemo(() => {
     if (!isFormValidForSimulation) return undefined;
 
@@ -149,18 +151,17 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     }
   }, [formData, isFormValidForSimulation, poolId, chainId]);
 
-  // Use the hook with simulation enabled when form is valid
+  // Use the hook - simulation is triggered manually on form submit
   const {
-    createPool,
     createPoolFromSimulation,
+    triggerSimulation,
     hash,
-    isPending,
     isConfirming,
     isCreatingDb,
     isLoading,
     isSuccess,
     isSimulating,
-    isSimulationReady,
+    simulationTriggered,
     simulationError,
     error,
     errorAction,
@@ -168,7 +169,6 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     reset,
   } = useCreatePool({
     contractParams,
-    enabled: isFormValidForSimulation && open,
   });
 
   const resetForm = () => {
@@ -188,6 +188,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   };
 
   // Handle success - close modal and reset form
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (isSuccess) {
       toast.success('Pool created successfully!');
@@ -217,12 +218,8 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     }
   }, [error, errorAction, isUserRejection]);
 
-  // Handle simulation errors - show toast when simulation fails
-  useEffect(() => {
-    if (simulationError && isFormValidForSimulation && !isSimulating) {
-      toast.error(`Transaction would fail: ${simulationError}`);
-    }
-  }, [simulationError, isFormValidForSimulation, isSimulating]);
+  // Simulation errors are now handled in handleSubmit, not via useEffect
+  // This prevents premature error messages while the user is still filling the form
 
   const validateForm = (): string | null => {
     if (!isConnected) {
@@ -286,21 +283,9 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       return;
     }
 
-    // Check if simulation is ready before proceeding
-    if (!isSimulationReady) {
-      if (simulationError) {
-        toast.error(`Transaction would fail: ${simulationError}`);
-      } else if (isSimulating) {
-        toast.error('Please wait for transaction validation to complete');
-      } else {
-        toast.error('Transaction validation not ready. Please check your inputs.');
-      }
-      return;
-    }
-
     const tokenAddress = getTokenAddress();
 
-    // Database parameters (contract params are already built for simulation)
+    // Database parameters
     const databaseParams = {
       id: poolId,
       name: formData.name,
@@ -316,11 +301,28 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     };
 
     try {
-      // Use the pre-validated simulation result for better UX
+      // Step 1: Trigger simulation on form submit
+      const simulationResult = await triggerSimulation();
+
+      // Step 2: Check if simulation was successful
+      if (simulationResult.error) {
+        toast.error(`Transaction would fail: ${simulationResult.error.message}`);
+        return;
+      }
+
+      if (!simulationResult.data?.request) {
+        toast.error('Transaction validation failed. Please check your inputs.');
+        return;
+      }
+
+      // Step 3: Execute the validated transaction (database insertion happens after tx confirmation)
       createPoolFromSimulation(databaseParams);
     } catch (err) {
       // Error handling is done via the hook's error state
       console.error('Pool creation failed:', err);
+      if (err instanceof Error) {
+        toast.error(err.message);
+      }
     }
   };
 
@@ -330,6 +332,16 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
         <>
           <Wallet className="mr-2 h-4 w-4" />
           Connect Wallet
+        </>
+      );
+    }
+
+    // Show simulating state first (happens on form submit)
+    if (isSimulating) {
+      return (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Simulating contract...
         </>
       );
     }
@@ -357,26 +369,6 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
           Creating Pool...
         </>
       );
-    }
-
-    // Show simulation status
-    if (isFormValidForSimulation) {
-      if (isSimulating) {
-        return (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Validating Transaction...
-          </>
-        );
-      }
-      if (isSimulationReady) {
-        return (
-          <>
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-            Create Pool
-          </>
-        );
-      }
     }
 
     return 'Create Pool';
@@ -624,7 +616,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={!isConnected || isLoading || (isFormValidForSimulation && !isSimulationReady)}
+              disabled={!isConnected || isLoading || isSimulating}
             >
               {getButtonContent()}
             </Button>

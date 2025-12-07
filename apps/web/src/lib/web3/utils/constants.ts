@@ -11,7 +11,7 @@ export const GAS_LIMITS = {
   REGISTER_USER: BigInt(200_0000),
   SUBMIT_PITCH: BigInt(250_0000),
   UPDATE_PITCH_STATUS: BigInt(150_0000),
-  CREATE_POOL: BigInt(500_000), // Pool deployment is gas-intensive
+  CREATE_POOL: BigInt(3_000_000), // Pool deployment with clone + initialize is gas-intensive
 
   // Token operations
   TOKEN_APPROVE: BigInt(100_0000),

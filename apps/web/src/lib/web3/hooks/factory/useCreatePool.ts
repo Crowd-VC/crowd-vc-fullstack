@@ -73,6 +73,7 @@ export type UseCreatePoolParams = {
  */
 export type UseCreatePoolHookParams = {
   contractParams?: CreatePoolContractParams;
+  /** @deprecated Use triggerSimulation() instead. Auto-simulation is disabled for better UX. */
   enabled?: boolean;
 };
 
@@ -80,6 +81,9 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
   const chainId = useChainId();
   const queryClient = useQueryClient();
   const factoryAddress = getFactoryAddress(chainId);
+
+  // Track if simulation has been manually triggered
+  const [simulationTriggered, setSimulationTriggered] = useState(false);
 
   // Build pool params for simulation (only if contractParams provided)
   const poolParams = hookParams?.contractParams
@@ -96,8 +100,8 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
         maxContribution: hookParams.contractParams.maxContribution || BigInt(0),
       }
     : undefined;
-  console.log('poolParams', poolParams);
-  // Simulate contract call to validate before execution
+
+  // Simulate contract call - only runs when manually triggered
   const {
     data: simulationData,
     error: simulationError,
@@ -110,11 +114,10 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
     args: poolParams ? [poolParams] : undefined,
     gas: GAS_LIMITS.CREATE_POOL,
     query: {
-      enabled: hookParams?.enabled && !!poolParams,
+      // Only run simulation when manually triggered
+      enabled: simulationTriggered && !!poolParams,
     },
   });
-  console.log('simulationData', simulationData);
-  console.log('simulationError', simulationError);
   const {
     writeContractAsync,
     writeContract,
@@ -284,20 +287,38 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
   // Simulation is ready when we have data and no error
   const isSimulationReady = !!simulationData?.request && !simulationError;
 
+  /**
+   * Manually trigger simulation - call this on form submit
+   * Returns a promise that resolves when simulation completes
+   */
+  const triggerSimulation = useCallback(async () => {
+    if (!poolParams) {
+      throw new Error('Contract params are required for simulation');
+    }
+    setSimulationTriggered(true);
+    // The simulation will run due to the enabled flag change
+    // We need to wait for it to complete
+    const result = await refetchSimulation();
+    return result;
+  }, [poolParams, refetchSimulation]);
+
   return {
     // Actions
     createPool,
     createPoolFromSimulation,
+    triggerSimulation,
     refetchSimulation,
     reset: () => {
       reset();
       setDbData(null);
       setDbError(null);
       setIsSuccess(false);
+      setSimulationTriggered(false);
     },
     // Simulation state
     isSimulating,
     isSimulationReady,
+    simulationTriggered,
     simulationError: simulationError
       ? parseContractError(simulationError)
       : undefined,

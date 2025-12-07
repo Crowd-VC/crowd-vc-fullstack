@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../interfaces/ICrowdVCPool.sol";
 import "../interfaces/ICrowdVCFactory.sol";
 import "../libraries/FeeCalculator.sol";
@@ -78,9 +79,6 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 1000; // 10%
     uint256 private constant BASIS_POINTS = 10000;
 
-    // Factory reference (set during initialization for clones)
-    address public factory;
-
     // Pool configuration
     string public poolName;
     string public category;
@@ -143,29 +141,41 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Constructor sets factory address
-     * @notice Disables initialization on implementation contract to prevent attacks
+     * @dev Constructor disables initialization on implementation contract
+     * @notice Implementation contract cannot be initialized, only clones can
      */
     constructor() ERC721("CrowdVC Pool Receipt", "CVCP") {
-        factory = msg.sender;
         // Prevent implementation contract from being initialized
         _initialized = true;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**
-     * @dev Initialize pool (called by factory after deployment)
+     * @dev Get the factory address from immutable clone args
+     * @notice For clones deployed via cloneWithImmutableArgs, reads factory from bytecode
+     * @return Factory contract address
      */
-    function initialize(
-        address _factory,
-        ICrowdVCPool.PoolConfig calldata _config
-    ) external {
+    function factory() public view returns (address) {
+        bytes memory args = Clones.fetchCloneArgs(address(this));
+        if (args.length == 0) {
+            // Implementation contract - no factory
+            return address(0);
+        }
+        // Decode the factory address from args (first 20 bytes)
+        return abi.decode(args, (address));
+    }
+
+    /**
+     * @dev Initialize pool (called by factory after clone deployment)
+     * @notice Factory address is embedded in clone bytecode, not passed as parameter
+     */
+    function initialize(ICrowdVCPool.PoolConfig calldata _config) external {
         if (_initialized) revert AlreadyInitialized();
+
+        // Get factory from immutable clone args (embedded in bytecode)
+        address _factory = factory();
         if (_factory == address(0)) revert OnlyFactory();
-        // For clones, factory is not set by constructor, so we set it here
-        // and verify the caller is the same address being set as factory
         if (msg.sender != _factory) revert OnlyFactory();
-        factory = _factory;
+
         if (_config.maxContribution != 0 && _config.maxContribution < _config.minContribution) {
             revert InvalidMaxContribution(_config.maxContribution, _config.minContribution);
         }
@@ -180,11 +190,11 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         category = _config.category;
         fundingGoal = _config.fundingGoal;
         votingDeadline = block.timestamp + _config.votingDuration;
-        
+
         // Set up accepted tokens (support single token for now, can add more later)
         acceptedTokens.push(_config.acceptedToken);
         isAcceptedToken[_config.acceptedToken] = true;
-        
+
         minContribution = _config.minContribution;
         maxContribution = _config.maxContribution;
         platformFeePercent = _config.platformFeePercent;
@@ -199,6 +209,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         _nextTokenId = 1;
         _initialized = true;
 
+        _grantRole(DEFAULT_ADMIN_ROLE, _factory);
         _grantRole(ADMIN_ROLE, _factory);
     }
 
@@ -724,7 +735,7 @@ contract CrowdVCPool is ICrowdVCPool, ERC721, AccessControl, ReentrancyGuard {
         if (_winnerIndex[pitchId] == 0) revert NotAWinner(pitchId);
 
         // Get startup address from factory
-        ICrowdVCFactory factoryContract = ICrowdVCFactory(factory);
+        ICrowdVCFactory factoryContract = ICrowdVCFactory(factory());
         ICrowdVCFactory.PitchData memory pitchData = factoryContract.getPitchData(pitchId);
         if (msg.sender != pitchData.startup) revert NotPitchOwner(msg.sender, pitchData.startup);
 
