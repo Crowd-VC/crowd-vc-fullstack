@@ -144,6 +144,7 @@ export type PitchWithUser = Pitch & {
     id: string;
     name: string | null;
     email: string;
+    walletAddress: string | null;
   };
 };
 
@@ -158,6 +159,7 @@ export async function getPitchesWithUserDetails(): Promise<PitchWithUser[]> {
         id: users.id,
         name: users.name,
         email: users.email,
+        walletAddress: users.walletAddress,
       },
     })
     .from(pitches)
@@ -183,6 +185,7 @@ export async function getPitchWithUserDetails(
         id: users.id,
         name: users.name,
         email: users.email,
+        walletAddress: users.walletAddress,
       },
     })
     .from(pitches)

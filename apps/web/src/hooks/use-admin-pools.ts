@@ -9,6 +9,13 @@ interface Pool {
     status: "active" | "closed" | "upcoming";
     createdAt: Date;
     updatedAt: Date;
+    contractAddress?: string | null;
+    fundingGoal?: number;
+    minContribution?: number;
+    maxContribution?: number | null;
+    fundingDuration?: number | null;
+    acceptedToken?: string | null;
+    currentFunding?: number;
 }
 
 interface CreatePoolData {
@@ -47,6 +54,23 @@ export function useAdminPools() {
             }
             return response.json();
         },
+    });
+}
+
+/**
+ * Hook to fetch a single pool by ID (admin)
+ */
+export function usePool(poolId: string) {
+    return useQuery<Pool>({
+        queryKey: ["admin-pool", poolId],
+        queryFn: async () => {
+            const response = await fetch(`/api/admin/pools/${poolId}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch pool");
+            }
+            return response.json();
+        },
+        enabled: !!poolId,
     });
 }
 

@@ -4,10 +4,10 @@
  */
 
 // Factory contract hooks
-export * from './factory'
+export * from './factory';
 
 // Token hooks
-export * from './tokens'
+export * from './tokens';
 
-// Note: Pool hooks will be added in a future phase
-// export * from './pool'
+// Pool contract hooks
+export * from './pool';
