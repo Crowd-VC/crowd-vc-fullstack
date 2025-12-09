@@ -35,6 +35,7 @@ export default function SubmitPitchPage() {
     isSubmitting,
     showSuccess,
     submissionId,
+    pitchId,
     handleFormSubmit,
     submitFormData,
     handleSuccessClose,
@@ -257,6 +258,7 @@ export default function SubmitPitchPage() {
         isOpen={showSuccess}
         onClose={handleSuccessClose}
         submissionId={submissionId}
+        pitchId={pitchId}
         pitchTitle={form.getValues('title')}
       />
     </>

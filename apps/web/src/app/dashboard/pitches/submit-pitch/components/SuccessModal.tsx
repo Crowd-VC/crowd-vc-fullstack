@@ -26,6 +26,7 @@ interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   submissionId?: string;
+  pitchId?: string;
   pitchTitle?: string;
 }
 
@@ -33,6 +34,7 @@ export function SuccessModal({
   isOpen,
   onClose,
   submissionId,
+  pitchId,
   pitchTitle,
 }: SuccessModalProps) {
   const router = useRouter();
@@ -60,7 +62,7 @@ export function SuccessModal({
   };
 
   const handleTrackSubmission = () => {
-    router.push(`/dashboard/pitches/${displaySubmissionId}`);
+    router.push(`/dashboard/pitches/${pitchId}`);
     onClose();
   };
 
