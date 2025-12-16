@@ -7,12 +7,12 @@
 
 import { useReadContract } from 'wagmi'
 import { useChainId } from 'wagmi'
-import { type Address } from 'viem'
+import { type Address, formatUnits } from 'viem'
 import { ERC20ABI } from '@crowd-vc/abis'
 import { type SupportedToken, getTokenDecimals } from '../../config/tokens'
 import { getUSDTAddress, getUSDCAddress } from '../../config/contracts'
 import { formatTokenAmount } from '../../utils/formatters'
-import { CACHE_DURATIONS } from '../../utils/constants'
+import { CACHE_DURATIONS, DECIMALS } from '../../utils/constants'
 
 /**
  * Get token contract address based on token type
@@ -52,6 +52,54 @@ export function useTokenAllowance(
   // Format allowance for display
   const formattedAllowance = allowance && token
     ? formatTokenAmount(allowance, getTokenDecimals(token))
+    : '0.00'
+
+  /**
+   * Check if allowance is sufficient for a given amount
+   */
+  const hasSufficientAllowance = (amount: bigint): boolean => {
+    return allowance ? allowance >= amount : false
+  }
+
+  return {
+    allowance,
+    formattedAllowance,
+    isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error,
+    refetch: result.refetch,
+    hasAllowance: allowance ? allowance > 0n : false,
+    hasSufficientAllowance
+  }
+}
+
+/**
+ * useTokenAllowanceByAddress Hook
+ * Check ERC20 token allowance using direct token address (bypasses symbol resolution)
+ */
+export function useTokenAllowanceByAddress(
+  tokenAddress?: Address,
+  owner?: Address,
+  spender?: Address,
+  decimals: number = DECIMALS.USDT
+) {
+  const result = useReadContract({
+    address: tokenAddress,
+    abi: ERC20ABI,
+    functionName: 'allowance',
+    args: owner && spender ? [owner, spender] : undefined,
+    query: {
+      enabled: !!tokenAddress && !!owner && !!spender,
+      staleTime: CACHE_DURATIONS.SHORT,
+      refetchOnWindowFocus: true
+    }
+  })
+
+  const allowance = result.data as bigint | undefined
+
+  // Format allowance for display
+  const formattedAllowance = allowance
+    ? formatUnits(allowance, decimals)
     : '0.00'
 
   /**

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useAppKit } from '@reown/appkit/react';
+import { useChainId } from 'wagmi';
+import { parseUnits, formatUnits } from 'viem';
 import {
   Dialog,
   DialogContent,
@@ -13,17 +15,23 @@ import Button from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Info, Wallet } from 'lucide-react';
+import { AlertCircle, Info, Wallet, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Pool } from '@/lib/types';
 import { TransactionStepper } from '../../../../components/pools/transaction-stepper';
+import { useTokenBalance } from '@/lib/web3/hooks/tokens/useTokenBalance';
+import { useGetPlatformFee } from '@/lib/web3/hooks/factory/useGetPlatformFee';
+import { usePoolInfo } from '@/lib/web3/hooks/pool/usePoolInfo';
+import { useEstimateContributeGas } from '@/lib/web3/hooks/pool/useEstimateContributeGas';
+import { getTokenSymbolFromAddress } from '@/lib/web3/utils/tokenSymbol';
+import { gasWeiToUSD, calculatePlatformFee } from '@/lib/web3/utils/gasCalculations';
+import { DECIMALS } from '@/lib/web3/utils/constants';
 
 interface ContributeModalProps {
   pool: Pool | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (amount: number) => Promise<void>;
-  walletBalance: number;
+  onConfirm: (amount: bigint, token: `0x${string}`) => Promise<void>;
   walletAddress?: string;
   isWalletConnected: boolean;
 }
@@ -33,35 +41,91 @@ export function ContributeModal({
   open,
   onOpenChange,
   onConfirm,
-  walletBalance,
   walletAddress,
   isWalletConnected,
 }: ContributeModalProps) {
   const { open: openWalletModal } = useAppKit();
+  const chainId = useChainId();
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
     'idle' | 'pending' | 'success' | 'error'
   >('idle');
 
+  // Get pool info from contract to get acceptedToken
+  const { poolInfo, isLoading: poolInfoLoading } = usePoolInfo(
+    pool?.contractAddress as `0x${string}` | undefined
+  );
+
+  // Get platform fee from factory contract
+  const { feeBasisPoints, feePercentage, isLoading: feeLoading } = useGetPlatformFee();
+
+  // Determine accepted token and symbol
+  const acceptedToken = poolInfo?.acceptedToken;
+  const tokenSymbol = acceptedToken
+    ? getTokenSymbolFromAddress(acceptedToken, chainId)
+    : 'UNKNOWN';
+
+  // Get user's token balance for the pool's accepted token
+  const {
+    balance: tokenBalance,
+    formattedBalance,
+    isLoading: balanceLoading,
+  } = useTokenBalance(
+    walletAddress as `0x${string}` | undefined,
+    tokenSymbol !== 'UNKNOWN' ? tokenSymbol : undefined
+  );
+
+  // Calculate amounts (USDT/USDC use 6 decimals)
+  const numAmount = Number.parseFloat(amount) || 0;
+  const amountInTokenUnits = amount && numAmount > 0
+    ? parseUnits(amount, DECIMALS.USDT) // Both USDT and USDC use 6 decimals
+    : 0n;
+
+  // Calculate platform fee using actual fee from contract
+  const platformFeeAmount = feeBasisPoints && amountInTokenUnits > 0n
+    ? calculatePlatformFee(amountInTokenUnits, feeBasisPoints)
+    : 0n;
+  const platformFeeUSD = platformFeeAmount > 0n
+    ? parseFloat(formatUnits(platformFeeAmount, DECIMALS.USDT))
+    : 0;
+
+  // Estimate gas cost (assume ETH price ~$3000 for BASE network)
+  const ETH_PRICE_USD = 3000;
+  const { gasCostWei, isLoading: gasLoading } = useEstimateContributeGas(
+    pool?.pool_address as `0x${string}` | undefined,
+    amountInTokenUnits > 0n ? amountInTokenUnits : undefined,
+    acceptedToken,
+    walletAddress as `0x${string}` | undefined
+  );
+  const gasEstimateUSD = gasCostWei > 0n
+    ? parseFloat(gasWeiToUSD(gasCostWei, ETH_PRICE_USD))
+    : 0;
+
+  const total = numAmount + platformFeeUSD + gasEstimateUSD;
+
+  // Get wallet balance as number for comparison
+  const walletBalanceNum = tokenBalance
+    ? parseFloat(formatUnits(tokenBalance, DECIMALS.USDT))
+    : 0;
+
   if (!pool) return null;
 
-  const numAmount = Number.parseFloat(amount) || 0;
-  const platformFee = numAmount * 0.02; // 2% platform fee
-  const gasEstimate = 15; // Mock gas estimate
-  const total = numAmount + platformFee + gasEstimate;
-
-  const isValid = numAmount >= pool.min_ticket && total <= walletBalance;
+  const isValid =
+    numAmount >= pool.min_ticket &&
+    total <= walletBalanceNum &&
+    acceptedToken &&
+    tokenSymbol !== 'UNKNOWN';
   const remaining = pool.goal - pool.current_size;
 
   const handleContribute = async () => {
-    if (!isValid) return;
+    if (!isValid || !acceptedToken) return;
 
     setIsProcessing(true);
     setTransactionStatus('pending');
 
     try {
-      await onConfirm(numAmount);
+      await onConfirm(amountInTokenUnits, acceptedToken);
       setTransactionStatus('success');
       setTimeout(() => {
         onOpenChange(false);
@@ -83,6 +147,8 @@ export function ContributeModal({
     }
   };
 
+  const isLoadingData = poolInfoLoading || feeLoading;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -92,7 +158,7 @@ export function ContributeModal({
             {pool.title}
             {walletAddress && (
               <span className="ml-2 text-xs">
-                • {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})
               </span>
             )}
           </DialogDescription>
@@ -100,11 +166,23 @@ export function ContributeModal({
 
         {transactionStatus !== 'idle' ? (
           <TransactionStepper status={transactionStatus} />
+        ) : isLoadingData ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Loading pool info...</span>
+          </div>
+        ) : tokenSymbol === 'UNKNOWN' ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Unable to determine accepted token for this pool. Please try again later.
+            </AlertDescription>
+          </Alert>
         ) : (
           <div className="space-y-6">
             {/* Amount Input */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Contribution Amount (USD)</Label>
+              <Label htmlFor="amount">Contribution Amount ({tokenSymbol})</Label>
               <Input
                 id="amount"
                 type="number"
@@ -112,7 +190,7 @@ export function ContributeModal({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 min={pool.min_ticket}
-                step={1000}
+                step={100}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Min: ${pool.min_ticket.toLocaleString()}</span>
@@ -126,18 +204,20 @@ export function ContributeModal({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Contribution</span>
                   <span className="font-medium">
-                    ${numAmount.toLocaleString()}
+                    ${numAmount.toLocaleString()} {tokenSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Platform Fee (2%)
+                    Platform Fee ({feePercentage?.toFixed(1) ?? '...'}%)
                   </span>
-                  <span className="font-medium">${platformFee.toFixed(2)}</span>
+                  <span className="font-medium">${platformFeeUSD.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Est. Gas Fee</span>
-                  <span className="font-medium">${gasEstimate.toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Est. Gas Fee {gasLoading && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+                  </span>
+                  <span className="font-medium">${gasEstimateUSD.toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
@@ -153,7 +233,8 @@ export function ContributeModal({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Wallet Balance: ${walletBalance.toLocaleString()}
+                {tokenSymbol} Balance: ${formattedBalance}
+                {balanceLoading && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
               </AlertDescription>
             </Alert>
 

@@ -7,8 +7,7 @@ import {
   usePoolDetails,
   useUserContributions,
 } from '@/hooks/use-investor-pools';
-import { useContribute, useVote } from '@/hooks/use-pool-contract';
-import { parseEther } from 'viem';
+import { useContribute, useVote } from '@/lib/web3/hooks/pool';
 import { useWallet } from '@/hooks/use-wallet';
 import { useAppKit } from '@reown/appkit/react';
 import { Button } from '@/components/ui/shadcn/button';
@@ -36,7 +35,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { toast } from 'sonner';
 
 const queryClient = new QueryClient();
 
@@ -60,17 +58,20 @@ function PoolDetailsContent() {
   const { open: openWalletModal } = useAppKit();
 
   // TODO: Get actual user ID from auth context
-  const userId = 'user_2'; // Placeholder for investor user
+  const userId = wallet.address;
 
   const { data, isLoading } = usePoolDetails(poolId, userId);
 
-  const castVote = useVote(poolId as `0x${string}`, () => {
+  // Get contract address from pool data (not the database ID!)
+  const poolContractAddress = data?.pool?.contractAddress as `0x${string}` | undefined;
+
+  const castVote = useVote(poolContractAddress as `0x${string}`, () => {
     queryClient.invalidateQueries({ queryKey: ['pools'] });
     setConfirmDialogOpen(false);
     setSelectedStartupId(null);
   });
 
-  const contribute = useContribute(poolId as `0x${string}`, () => {
+  const contribute = useContribute(poolContractAddress as `0x${string}`, () => {
     queryClient.invalidateQueries({ queryKey: ['pools'] });
     queryClient.invalidateQueries({ queryKey: ['user-contributions'] });
   });
@@ -86,14 +87,13 @@ function PoolDetailsContent() {
     openWalletModal();
   };
 
-  const handleContribute = async (amount: number) => {
-    if (!wallet.address) return;
-
+  // Updated to accept bigint amount and token address from ContributionPanel
+  const handleContribute = async (amount: bigint, token: `0x${string}`) => {
     try {
-      contribute.contribute(parseEther(amount.toString()));
+      await contribute.contribute({ amount, token });
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to initiate contribution');
+      // Error handling is now done by the hook with better UX
+      console.error('Contribution error:', error);
     }
   };
 
@@ -128,14 +128,16 @@ function PoolDetailsContent() {
     setConfirmDialogOpen(true);
   };
 
+  // Updated: vote hook now handles bytes32 conversion and error display internally
   const handleConfirmVote = async () => {
     if (!selectedStartupId || !wallet.address) return;
+    // The hook now handles pool address validation internally
 
     try {
-      castVote.vote(selectedStartupId as `0x${string}`);
+      await castVote.vote(selectedStartupId);
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to initiate vote');
+      // Error handling is now done by the hook with better UX
+      console.error('Vote error:', error);
     }
   };
 
@@ -238,8 +240,7 @@ function PoolDetailsContent() {
               minContribution: pool.minContribution || 1000,
               maxContribution: pool.maxContribution,
             }}
-            // walletBalance={Number(wallet.balance) || 50000}
-            walletBalance={50000}
+            walletAddress={wallet.address}
             isWalletConnected={wallet.isConnected}
             onContribute={handleContribute}
             onConnectWallet={handleConnectWallet}

@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { getUSDTAddress, getUSDCAddress } from '@/lib/web3/config/contracts';
+import { getContractAddress } from '@/lib/web3/config/contracts';
 import { Loader2, Wallet, AlertCircle } from 'lucide-react';
 import { DECIMALS } from '@/lib/web3/utils/constants';
 
@@ -67,10 +67,11 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     description: '',
     category: '',
     votingDeadline: '',
+    pitchSubmissionDeadline: '',
+    fundingDurationDays: '',
     status: 'upcoming' as 'active' | 'upcoming',
     // Smart contract fields
     fundingGoal: '',
-    fundingDurationDays: '30',
     minContribution: '100',
     maxContribution: '',
     acceptedToken: 'USDT' as 'USDT' | 'USDC',
@@ -82,9 +83,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   // Get token address based on selection
   const getTokenAddress = (): `0x${string}` => {
     try {
-      return formData.acceptedToken === 'USDT'
-        ? getUSDTAddress(chainId)
-        : getUSDCAddress(chainId);
+      return getContractAddress(chainId, formData.acceptedToken);
     } catch {
       // Return zero address if token not configured for chain
       return '0x0000000000000000000000000000000000000001' as `0x${string}`;
@@ -105,6 +104,7 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   const isFormValidForSimulation = useMemo(() => {
     const fundingGoal = Number(formData.fundingGoal);
     const minContribution = Number(formData.minContribution);
+    const fundingDurationDays = Number(formData.fundingDurationDays);
     const votingDuration = calculateVotingDuration();
 
     return (
@@ -114,8 +114,8 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       fundingGoal >= MIN_FUNDING_GOAL &&
       fundingGoal <= MAX_FUNDING_GOAL &&
       minContribution > 0 &&
-      votingDuration > BigInt(0) &&
-      Number(formData.fundingDurationDays) >= 1
+      fundingDurationDays > 0 &&
+      votingDuration > BigInt(0)
     );
   }, [formData, isConnected]);
 
@@ -131,8 +131,11 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       const maxContributionUnits = formData.maxContribution
         ? parseUnits(formData.maxContribution, TOKEN_DECIMALS)
         : BigInt(0);
-      const fundingDurationSeconds = BigInt(Number(formData.fundingDurationDays) * 86400);
       const votingDuration = calculateVotingDuration();
+      // Convert funding duration days to seconds
+      const fundingDurationSeconds = formData.fundingDurationDays
+        ? BigInt(Number(formData.fundingDurationDays) * 86400)
+        : BigInt(0);
 
       return {
         poolId,
@@ -161,7 +164,6 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     isLoading,
     isSuccess,
     isSimulating,
-    simulationTriggered,
     simulationError,
     error,
     errorAction,
@@ -177,9 +179,10 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       description: '',
       category: '',
       votingDeadline: '',
+      pitchSubmissionDeadline: '',
+      fundingDurationDays: '',
       status: 'upcoming',
       fundingGoal: '',
-      fundingDurationDays: '30',
       minContribution: '100',
       maxContribution: '',
       acceptedToken: 'USDT',
@@ -234,6 +237,10 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       return 'Please set a voting deadline';
     }
 
+    if (!formData.pitchSubmissionDeadline) {
+      return 'Please set a pitch submission deadline';
+    }
+
     const votingDuration = calculateVotingDuration();
     const votingDurationDays = Number(votingDuration) / 86400;
 
@@ -243,6 +250,13 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
 
     if (votingDurationDays > MAX_VOTING_DURATION_DAYS) {
       return `Voting deadline must be within ${MAX_VOTING_DURATION_DAYS} days`;
+    }
+
+    // Validate pitch submission deadline is after voting deadline
+    const votingDeadlineDate = new Date(formData.votingDeadline);
+    const pitchSubmissionDate = new Date(formData.pitchSubmissionDeadline);
+    if (pitchSubmissionDate >= votingDeadlineDate) {
+      return 'Pitch submission deadline must be before voting deadline';
     }
 
     const fundingGoal = Number(formData.fundingGoal);
@@ -271,6 +285,10 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       return 'Funding duration must be at least 1 day';
     }
 
+    if (fundingDurationDays > 365) {
+      return 'Funding duration cannot exceed 365 days';
+    }
+
     return null;
   };
 
@@ -292,11 +310,12 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       description: formData.description,
       category: formData.category,
       votingDeadline: new Date(formData.votingDeadline),
+      pitchSubmissionDeadline: new Date(formData.pitchSubmissionDeadline),
       status: formData.status,
       fundingGoal: Number(formData.fundingGoal),
       minContribution: Number(formData.minContribution),
       maxContribution: formData.maxContribution ? Number(formData.maxContribution) : undefined,
-      fundingDuration: Number(formData.fundingDurationDays) * 86400,
+      fundingDuration: Number(formData.fundingDurationDays) * 86400, // Convert days to seconds
       acceptedToken: tokenAddress,
     };
 
@@ -550,6 +569,21 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="pitchSubmissionDeadline">Pitch Submission Deadline *</Label>
+                <Input
+                  id="pitchSubmissionDeadline"
+                  type="datetime-local"
+                  value={formData.pitchSubmissionDeadline}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pitchSubmissionDeadline: e.target.value })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deadline for startups to submit pitches
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="votingDeadline">Voting Deadline *</Label>
                 <Input
                   id="votingDeadline"
@@ -560,27 +594,27 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  {MIN_VOTING_DURATION_DAYS}-{MAX_VOTING_DURATION_DAYS} days from now
+                  {MIN_VOTING_DURATION_DAYS}-{MAX_VOTING_DURATION_DAYS} days from now. Must be after pitch submission deadline.
                 </p>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fundingDurationDays">Funding Duration (days) *</Label>
-                <Input
-                  id="fundingDurationDays"
-                  type="number"
-                  placeholder="e.g., 30"
-                  min={1}
-                  max={365}
-                  value={formData.fundingDurationDays}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fundingDurationDays: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Duration for investment collection after voting ends
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="fundingDurationDays">Funding Duration (days) *</Label>
+              <Input
+                id="fundingDurationDays"
+                type="number"
+                placeholder="e.g., 30"
+                min={1}
+                max={365}
+                value={formData.fundingDurationDays}
+                onChange={(e) =>
+                  setFormData({ ...formData, fundingDurationDays: e.target.value })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Funding ends this many days after voting closes
+              </p>
             </div>
           </div>
 

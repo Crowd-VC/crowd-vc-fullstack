@@ -7,15 +7,15 @@
  * Usage: pnpm generate:addresses
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEPLOYMENTS_DIR = path.join(__dirname, '../ignition/deployments');
-const OUTPUT_FILE = path.join(__dirname, '../../abis/src/addresses.ts');
+const DEPLOYMENTS_DIR = path.join(__dirname, "../ignition/deployments");
+const OUTPUT_FILE = path.join(__dirname, "../../abis/src/addresses.ts");
 
 interface DeployedAddresses {
   [key: string]: string;
@@ -32,47 +32,46 @@ interface AllAddresses {
 
 function parseDeployedAddresses(addresses: DeployedAddresses): ChainAddresses {
   return {
-    CrowdVCFactory:
-      addresses['FactoryModule#CrowdVCFactory'] ||
-      '0x0000000000000000000000000000000000000000',
+    CrowdVCFactory: addresses["FactoryModule#CrowdVCFactory"] ||
+      "0x0000000000000000000000000000000000000000",
     CrowdVCPool_Implementation:
-      addresses['FactoryModule#CrowdVCPool_Implementation'] ||
-      '0x0000000000000000000000000000000000000000',
+      addresses["FactoryModule#CrowdVCPool_Implementation"] ||
+      "0x0000000000000000000000000000000000000000",
   };
 }
 
 function getChainName(chainId: number): string {
   const chainNames: Record<number, string> = {
-    1: 'Ethereum Mainnet',
-    11155111: 'Sepolia',
-    8453: 'Base',
-    84532: 'Base Sepolia',
-    31337: 'Localhost (Hardhat)',
+    1: "Ethereum Mainnet",
+    11155111: "Sepolia",
+    8453: "Base",
+    84532: "Base Sepolia",
+    31337: "Localhost (Hardhat)",
   };
   return chainNames[chainId] || `Chain ${chainId}`;
 }
 
 function generateAddressesFile(): void {
-  console.log('🔍 Scanning deployments directory:', DEPLOYMENTS_DIR);
+  console.log("🔍 Scanning deployments directory:", DEPLOYMENTS_DIR);
 
   if (!fs.existsSync(DEPLOYMENTS_DIR)) {
-    console.error('❌ Deployments directory not found:', DEPLOYMENTS_DIR);
+    console.error("❌ Deployments directory not found:", DEPLOYMENTS_DIR);
     process.exit(1);
   }
 
   const allAddresses: AllAddresses = {};
   const chainDirs = fs
     .readdirSync(DEPLOYMENTS_DIR)
-    .filter((dir) => dir.startsWith('chain-'));
+    .filter((dir) => dir.startsWith("chain-"));
 
   console.log(`📁 Found ${chainDirs.length} deployment(s)`);
 
   for (const chainDir of chainDirs) {
-    const chainId = parseInt(chainDir.replace('chain-', ''), 10);
+    const chainId = Number.parseInt(chainDir.replace("chain-", ""), 10);
     const addressesPath = path.join(
       DEPLOYMENTS_DIR,
       chainDir,
-      'deployed_addresses.json',
+      "deployed_addresses.json",
     );
 
     if (!fs.existsSync(addressesPath)) {
@@ -81,7 +80,7 @@ function generateAddressesFile(): void {
     }
 
     const rawAddresses: DeployedAddresses = JSON.parse(
-      fs.readFileSync(addressesPath, 'utf-8'),
+      fs.readFileSync(addressesPath, "utf-8"),
     );
     allAddresses[chainId] = parseDeployedAddresses(rawAddresses);
     console.log(
@@ -109,7 +108,9 @@ export interface ChainAddresses {
 /**
  * All deployed addresses organized by chain ID
  */
-export const DeployedAddresses: Record<number, ChainAddresses> = ${JSON.stringify(allAddresses, null, 2)} as const;
+export const DeployedAddresses: Record<number, ChainAddresses> = ${
+    JSON.stringify(allAddresses, null, 2)
+  } as const;
 
 /**
  * Get addresses for a specific chain
@@ -161,12 +162,14 @@ export const CROWD_VC_FACTORY_ADDRESS = DeployedAddresses[11155111]?.CrowdVCFact
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  fs.writeFileSync(OUTPUT_FILE, fileContent, 'utf-8');
+  fs.writeFileSync(OUTPUT_FILE, fileContent, "utf-8");
   console.log(`\n✨ Generated addresses file: ${OUTPUT_FILE}`);
   console.log(
-    `📊 Chains included: ${Object.keys(allAddresses)
-      .map((id) => getChainName(parseInt(id)))
-      .join(', ')}`,
+    `📊 Chains included: ${
+      Object.keys(allAddresses)
+        .map((id) => getChainName(Number.parseInt(id)))
+        .join(", ")
+    }`,
   );
 }
 

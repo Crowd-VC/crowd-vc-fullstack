@@ -19,7 +19,7 @@ export const GAS_LIMITS = {
   TOKEN_TRANSFER: BigInt(65_0000),
 
   // Pool contract operations
-  CONTRIBUTE: BigInt(300_0000),
+  CONTRIBUTE: BigInt(200_000),
   VOTE: BigInt(150_000),
   WITHDRAW_EARLY: BigInt(200_0000),
   REQUEST_REFUND: BigInt(200_0000),

@@ -57,9 +57,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate unique IDs
-        const pitchId = `pitch_${Date.now()}_${
-            Math.random().toString(36).substr(2, 9)
-        }`;
+        const pitchId = body.pitchId;
         const submissionId = `PITCH-${Date.now().toString().slice(-6)}-${
             Math.random().toString(36).substr(2, 4).toUpperCase()
         }`;

@@ -31,6 +31,12 @@ export type UseTokenApprovalParams = {
   isUnlimited?: boolean // If true, approve max uint256
 }
 
+export type UseTokenApprovalByAddressParams = {
+  tokenAddress: Address // Direct token contract address
+  spender: Address
+  amount: bigint
+}
+
 export function useTokenApproval() {
   const chainId = useChainId()
 
@@ -51,7 +57,7 @@ export function useTokenApproval() {
   })
 
   /**
-   * Approve token spending
+   * Approve token spending by symbol
    * @param params - Approval parameters
    */
   const approve = async (params: UseTokenApprovalParams) => {
@@ -64,6 +70,13 @@ export function useTokenApproval() {
         ? MAX_UINT256
         : parseUnits(params.amount, decimals)
 
+      console.log('Approving token by symbol:', {
+        symbol: params.token,
+        resolvedAddress: tokenAddress,
+        spender: params.spender,
+        amount: approvalAmount.toString(),
+      })
+
       return writeContract({
         address: tokenAddress,
         abi: ERC20ABI,
@@ -73,6 +86,32 @@ export function useTokenApproval() {
       })
     } catch (error) {
       console.error('Failed to approve token:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Approve token spending by direct address (bypasses symbol resolution)
+   * Use this when you have the exact token address from the contract
+   * @param params - Approval parameters with direct token address
+   */
+  const approveByAddress = async (params: UseTokenApprovalByAddressParams) => {
+    try {
+      console.log('Approving token by address:', {
+        tokenAddress: params.tokenAddress,
+        spender: params.spender,
+        amount: params.amount.toString(),
+      })
+
+      return writeContract({
+        address: params.tokenAddress,
+        abi: ERC20ABI,
+        functionName: 'approve',
+        args: [params.spender, params.amount],
+        gas: GAS_LIMITS.TOKEN_APPROVE
+      })
+    } catch (error) {
+      console.error('Failed to approve token by address:', error)
       throw error
     }
   }
@@ -88,6 +127,7 @@ export function useTokenApproval() {
 
   return {
     approve,
+    approveByAddress,
     hash,
     isPending,
     isConfirming,

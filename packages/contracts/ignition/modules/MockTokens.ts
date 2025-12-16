@@ -1,4 +1,5 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+import { parseUnits } from "viem";
 
 /**
  * Mock Tokens Deployment Module
@@ -30,9 +31,8 @@ export default buildModule("MockTokensModule", (m) => {
         id: "MockUSDC",
     });
 
-    // Optional: Mint initial supply to deployer for testing
-    // You can call these from the console after deployment
-    // Example: mockUSDT.mint(deployerAddress, parseUnits("1000000", 6))
+    m.call(mockUSDT, "mint", [deployer, parseUnits("1000000", 6)]);
+    m.call(mockUSDC, "mint", [deployer, parseUnits("1000000", 6)]);
 
     return {
         mockUSDT,

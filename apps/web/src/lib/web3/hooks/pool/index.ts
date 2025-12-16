@@ -14,3 +14,7 @@ export * from './useActivatePool';
 export * from './useEndVoting';
 export * from './useAddStartupToPool';
 export * from './useRemoveStartupFromPool';
+
+// Pool investor actions
+export * from './useContribute';
+export * from './useVote';
