@@ -7,27 +7,29 @@
  * Compatible with Hardhat 3.0 + node:test + viem
  */
 
-import hre from 'hardhat';
-import { getAddress, keccak256, encodePacked, parseUnits } from 'viem';
-import assert from 'node:assert';
+import hre from "hardhat";
+import { encodePacked, getAddress, keccak256, parseUnits } from "viem";
+import assert from "node:assert";
 import {
-  TOKEN_DECIMALS,
-  ONE_DAY,
-  UserType,
-  PitchStatus,
-  DEFAULT_METADATA_URI,
-  DEFAULT_PITCH_TITLE,
-  DEFAULT_PITCH_IPFS,
-  DEFAULT_PITCH_FUNDING_GOAL,
   BASIS_POINTS,
+  DEFAULT_METADATA_URI,
+  DEFAULT_PITCH_FUNDING_GOAL,
+  DEFAULT_PITCH_IPFS,
+  DEFAULT_PITCH_TITLE,
   DEFAULT_PLATFORM_FEE,
   EARLY_WITHDRAWAL_PENALTY,
-} from './constants.js';
+  ONE_DAY,
+  PitchStatus,
+  TOKEN_DECIMALS,
+  UserType,
+} from "./constants.js";
 
 // ============ TYPE DEFINITIONS ============
 
 type Contract = Awaited<ReturnType<typeof hre.viem.deployContract>>;
-type WalletClient = Awaited<ReturnType<typeof hre.viem.getWalletClients>>[number];
+type WalletClient = Awaited<
+  ReturnType<typeof hre.viem.getWalletClients>
+>[number];
 
 // ============ NETWORK HELPERS ============
 
@@ -73,7 +75,10 @@ export async function mineBlocks(blocks: number): Promise<void> {
 /**
  * Set the balance of an account.
  */
-export async function setBalance(address: `0x${string}`, balance: bigint): Promise<void> {
+export async function setBalance(
+  address: `0x${string}`,
+  balance: bigint,
+): Promise<void> {
   const { networkHelpers } = await hre.network.connect();
   await networkHelpers.setBalance(address, balance);
 }
@@ -81,7 +86,9 @@ export async function setBalance(address: `0x${string}`, balance: bigint): Promi
 /**
  * Impersonate an account for testing.
  */
-export async function impersonateAccount(address: `0x${string}`): Promise<void> {
+export async function impersonateAccount(
+  address: `0x${string}`,
+): Promise<void> {
   const { networkHelpers } = await hre.network.connect();
   await networkHelpers.impersonateAccount(address);
 }
@@ -89,7 +96,9 @@ export async function impersonateAccount(address: `0x${string}`): Promise<void> 
 /**
  * Stop impersonating an account.
  */
-export async function stopImpersonatingAccount(address: `0x${string}`): Promise<void> {
+export async function stopImpersonatingAccount(
+  address: `0x${string}`,
+): Promise<void> {
   const { networkHelpers } = await hre.network.connect();
   await networkHelpers.stopImpersonatingAccount(address);
 }
@@ -101,7 +110,7 @@ export async function stopImpersonatingAccount(address: `0x${string}`): Promise<
  */
 export async function extractPitchId(
   factory: Contract,
-  index = 0
+  index = 0,
 ): Promise<`0x${string}`> {
   const logs = await factory.getEvents.PitchSubmitted();
   if (logs.length <= index) {
@@ -115,7 +124,7 @@ export async function extractPitchId(
  */
 export async function extractPoolAddress(
   factory: Contract,
-  index = 0
+  index = 0,
 ): Promise<`0x${string}`> {
   const logs = await factory.getEvents.PoolDeployed();
   if (logs.length <= index) {
@@ -129,7 +138,7 @@ export async function extractPoolAddress(
  */
 export async function extractTokenId(
   pool: Contract,
-  index = 0
+  index = 0,
 ): Promise<bigint> {
   const logs = await pool.getEvents.ContributionMade();
   if (logs.length <= index) {
@@ -146,7 +155,7 @@ export async function extractTokenId(
 export async function registerStartup(
   factory: Contract,
   account: WalletClient,
-  metadataURI = DEFAULT_METADATA_URI
+  metadataURI = DEFAULT_METADATA_URI,
 ): Promise<void> {
   await factory.write.registerUser([UserType.Startup, metadataURI], {
     account: account.account,
@@ -159,7 +168,7 @@ export async function registerStartup(
 export async function registerInvestor(
   factory: Contract,
   account: WalletClient,
-  metadataURI = DEFAULT_METADATA_URI
+  metadataURI = DEFAULT_METADATA_URI,
 ): Promise<void> {
   await factory.write.registerUser([UserType.Investor, metadataURI], {
     account: account.account,
@@ -178,7 +187,7 @@ export async function submitPitchAndGetId(
     title?: string;
     ipfsHash?: string;
     fundingGoal?: bigint;
-  } = {}
+  } = {},
 ): Promise<`0x${string}`> {
   const { viem } = await hre.network.connect();
   const publicClient = await viem.getPublicClient();
@@ -202,7 +211,7 @@ export async function submitPitchAndGetId(
 export async function approvePitch(
   factory: Contract,
   pitchId: `0x${string}`,
-  admin: WalletClient
+  admin: WalletClient,
 ): Promise<void> {
   await factory.write.updatePitchStatus([pitchId, PitchStatus.Approved], {
     account: admin.account,
@@ -215,7 +224,7 @@ export async function approvePitch(
 export async function rejectPitch(
   factory: Contract,
   pitchId: `0x${string}`,
-  admin: WalletClient
+  admin: WalletClient,
 ): Promise<void> {
   await factory.write.updatePitchStatus([pitchId, PitchStatus.Rejected], {
     account: admin.account,
@@ -231,7 +240,7 @@ export async function mintTokens(
   token: Contract,
   to: `0x${string}`,
   amount: bigint,
-  owner: WalletClient
+  owner: WalletClient,
 ): Promise<void> {
   await token.write.mint([to, amount], { account: owner.account });
 }
@@ -243,7 +252,7 @@ export async function approveTokens(
   token: Contract,
   spender: `0x${string}`,
   amount: bigint,
-  owner: WalletClient
+  owner: WalletClient,
 ): Promise<void> {
   await token.write.approve([spender, amount], { account: owner.account });
 }
@@ -253,7 +262,7 @@ export async function approveTokens(
  */
 export async function getTokenBalance(
   token: Contract,
-  address: `0x${string}`
+  address: `0x${string}`,
 ): Promise<bigint> {
   return token.read.balanceOf([address]) as Promise<bigint>;
 }
@@ -279,7 +288,7 @@ export function formatTokenAmount(amount: bigint): string {
  */
 export function calculatePlatformFee(
   amount: bigint,
-  feePercent: bigint = DEFAULT_PLATFORM_FEE
+  feePercent: bigint = DEFAULT_PLATFORM_FEE,
 ): bigint {
   return (amount * feePercent) / BASIS_POINTS;
 }
@@ -289,7 +298,7 @@ export function calculatePlatformFee(
  */
 export function calculateNetAmount(
   amount: bigint,
-  feePercent: bigint = DEFAULT_PLATFORM_FEE
+  feePercent: bigint = DEFAULT_PLATFORM_FEE,
 ): bigint {
   const fee = calculatePlatformFee(amount, feePercent);
   return amount - fee;
@@ -300,7 +309,7 @@ export function calculateNetAmount(
  */
 export function calculateEarlyWithdrawal(
   netAmount: bigint,
-  penaltyPercent: bigint = EARLY_WITHDRAWAL_PENALTY
+  penaltyPercent: bigint = EARLY_WITHDRAWAL_PENALTY,
 ): { penalty: bigint; refund: bigint } {
   const penalty = (netAmount * penaltyPercent) / BASIS_POINTS;
   const refund = netAmount - penalty;
@@ -313,7 +322,7 @@ export function calculateEarlyWithdrawal(
 export function calculateVoteWeight(
   contribution: bigint,
   numPitchesVotedFor: number,
-  feePercent: bigint = DEFAULT_PLATFORM_FEE
+  feePercent: bigint = DEFAULT_PLATFORM_FEE,
 ): bigint {
   const netAmount = calculateNetAmount(contribution, feePercent);
   return netAmount / BigInt(numPitchesVotedFor);
@@ -326,16 +335,16 @@ export function calculateVoteWeight(
  */
 export async function expectRevert(
   promise: Promise<unknown>,
-  errorMessage: string
+  errorMessage: string,
 ): Promise<void> {
   try {
     await promise;
-    assert.fail('Expected promise to revert');
+    assert.fail("Expected promise to revert");
   } catch (error: unknown) {
     const errorString = (error as Error).message || String(error);
     assert.ok(
       errorString.includes(errorMessage),
-      `Expected error containing "${errorMessage}" but got "${errorString}"`
+      `Expected error containing "${errorMessage}" but got "${errorString}"`,
     );
   }
 }
@@ -346,12 +355,12 @@ export async function expectRevert(
 export function assertApproximatelyEqual(
   actual: bigint,
   expected: bigint,
-  tolerance: bigint = 1n
+  tolerance: bigint = 1n,
 ): void {
   const diff = actual > expected ? actual - expected : expected - actual;
   assert.ok(
     diff <= tolerance,
-    `Expected ${actual} to be approximately equal to ${expected} (tolerance: ${tolerance}), diff: ${diff}`
+    `Expected ${actual} to be approximately equal to ${expected} (tolerance: ${tolerance}), diff: ${diff}`,
   );
 }
 
@@ -361,7 +370,7 @@ export function assertApproximatelyEqual(
 export async function hasRole(
   contract: Contract,
   role: `0x${string}`,
-  account: `0x${string}`
+  account: `0x${string}`,
 ): Promise<boolean> {
   return contract.read.hasRole([role, account]) as Promise<boolean>;
 }
@@ -373,7 +382,7 @@ export async function hasRole(
  */
 export async function getPoolAt(address: `0x${string}`) {
   const { viem } = await hre.network.connect();
-  return viem.getContractAt('CrowdVCPool', address);
+  return viem.getContractAt("CrowdVCPool", address);
 }
 
 /**
@@ -383,7 +392,7 @@ export async function contribute(
   pool: Contract,
   amount: bigint,
   token: `0x${string}`,
-  investor: WalletClient
+  investor: WalletClient,
 ): Promise<bigint> {
   const { viem } = await hre.network.connect();
   const publicClient = await viem.getPublicClient();
@@ -404,7 +413,7 @@ export async function contribute(
 export async function voteForPitch(
   pool: Contract,
   pitchId: `0x${string}`,
-  investor: WalletClient
+  investor: WalletClient,
 ): Promise<void> {
   await pool.write.vote([pitchId], { account: investor.account });
 }
@@ -415,7 +424,7 @@ export async function voteForPitch(
 export async function voteForPitches(
   pool: Contract,
   pitchIds: `0x${string}`[],
-  investor: WalletClient
+  investor: WalletClient,
 ): Promise<void> {
   for (const pitchId of pitchIds) {
     await voteForPitch(pool, pitchId, investor);
@@ -447,13 +456,13 @@ export function computePitchIdHash(
   startup: `0x${string}`,
   title: string,
   timestamp: bigint,
-  nonce: bigint
+  nonce: bigint,
 ): `0x${string}` {
   return keccak256(
     encodePacked(
-      ['address', 'string', 'uint256', 'uint256'],
-      [startup, title, timestamp, nonce]
-    )
+      ["address", "string", "uint256", "uint256"],
+      [startup, title, timestamp, nonce],
+    ),
   );
 }
 
@@ -461,7 +470,7 @@ export function computePitchIdHash(
  * Compute a pool ID hash.
  */
 export function computePoolIdHash(poolId: string): `0x${string}` {
-  return keccak256(encodePacked(['string'], [poolId]));
+  return keccak256(encodePacked(["string"], [poolId]));
 }
 
 // ============ RANDOM DATA GENERATORS ============
@@ -505,7 +514,7 @@ export async function takeSnapshot(): Promise<() => Promise<void>> {
  */
 export async function getTreasuryAt(address: `0x${string}`) {
   const { viem } = await hre.network.connect();
-  return viem.getContractAt('CrowdVCTreasury', address);
+  return viem.getContractAt("CrowdVCTreasury", address);
 }
 
 /**
@@ -513,7 +522,7 @@ export async function getTreasuryAt(address: `0x${string}`) {
  */
 export async function getTreasuryTokenBalance(
   treasury: Contract,
-  token: Contract
+  token: Contract,
 ): Promise<bigint> {
   return token.read.balanceOf([treasury.address]) as Promise<bigint>;
 }

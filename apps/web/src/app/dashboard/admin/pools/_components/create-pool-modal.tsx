@@ -93,9 +93,12 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
   // Calculate voting duration in seconds from deadline
   const calculateVotingDuration = (): bigint => {
     if (!formData.votingDeadline) return BigInt(0);
+    if (!formData.pitchSubmissionDeadline) return BigInt(0);
+
     const deadlineTimestamp = new Date(formData.votingDeadline).getTime();
-    const now = Date.now();
-    const durationMs = deadlineTimestamp - now;
+    const submissionTimestamp = new Date(formData.pitchSubmissionDeadline).getTime();
+
+    const durationMs = deadlineTimestamp - submissionTimestamp;
     return BigInt(Math.max(0, Math.floor(durationMs / 1000)));
   };
 
@@ -324,18 +327,13 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
       const simulationResult = await triggerSimulation();
 
       // Step 2: Check if simulation was successful
-      if (simulationResult.error) {
-        toast.error(`Transaction would fail: ${simulationResult.error.message}`);
-        return;
-      }
-
-      if (!simulationResult.data?.request) {
-        toast.error('Transaction validation failed. Please check your inputs.');
+      if (!simulationResult.result) {
+        toast.error("Transaction would fail");
         return;
       }
 
       // Step 3: Execute the validated transaction (database insertion happens after tx confirmation)
-      createPoolFromSimulation(databaseParams);
+      createPoolFromSimulation(databaseParams, simulationResult.request);
     } catch (err) {
       // Error handling is done via the hook's error state
       console.error('Pool creation failed:', err);

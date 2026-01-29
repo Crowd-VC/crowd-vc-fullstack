@@ -5,26 +5,28 @@
  * @see https://wagmi.sh/react/api/hooks/useSimulateContract
  */
 
-'use client';
+"use client";
 
 import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
   useChainId,
+  useConfig,
   useSimulateContract,
-} from 'wagmi';
-import { parseEventLogs } from 'viem';
-import { useEffect, useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { CrowdVCFactoryABI } from '@crowd-vc/abis';
-import { getFactoryAddress } from '../../config/contracts';
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
+import { parseEventLogs } from "viem";
+import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CrowdVCFactoryABI } from "@crowd-vc/abis";
+import { getFactoryAddress } from "../../config/contracts";
 import {
-  parseContractError,
   getCustomError,
   getErrorAction,
   isUserRejectionError,
-} from '../../utils/errors';
-import { GAS_LIMITS } from '../../utils/constants';
+  parseContractError,
+} from "../../utils/errors";
+import { GAS_LIMITS } from "../../utils/constants";
+import { simulateContract } from "wagmi/actions";
 
 /**
  * Parameters for creating a pool on-chain
@@ -51,7 +53,7 @@ export type CreatePoolDatabaseParams = {
   description: string;
   category: string;
   votingDeadline: Date;
-  status?: 'active' | 'upcoming';
+  status?: "active" | "upcoming";
   fundingGoal: number;
   minContribution: number;
   maxContribution?: number;
@@ -65,7 +67,7 @@ export type CreatePoolDatabaseParams = {
  */
 export type UseCreatePoolParams = {
   contractParams: CreatePoolContractParams;
-  databaseParams: Omit<CreatePoolDatabaseParams, 'contractAddress'>;
+  databaseParams: Omit<CreatePoolDatabaseParams, "contractAddress">;
 };
 
 /**
@@ -88,17 +90,17 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
   // Build pool params for simulation (only if contractParams provided)
   const poolParams = hookParams?.contractParams
     ? {
-        poolId: hookParams.contractParams.poolId,
-        name: hookParams.contractParams.name,
-        category: hookParams.contractParams.category,
-        fundingGoal: hookParams.contractParams.fundingGoal,
-        votingDuration: hookParams.contractParams.votingDuration,
-        fundingDuration: hookParams.contractParams.fundingDuration,
-        candidatePitches: hookParams.contractParams.candidatePitches || [],
-        acceptedToken: hookParams.contractParams.acceptedToken,
-        minContribution: hookParams.contractParams.minContribution,
-        maxContribution: hookParams.contractParams.maxContribution || BigInt(0),
-      }
+      poolId: hookParams.contractParams.poolId,
+      name: hookParams.contractParams.name,
+      category: hookParams.contractParams.category,
+      fundingGoal: hookParams.contractParams.fundingGoal,
+      votingDuration: hookParams.contractParams.votingDuration,
+      fundingDuration: hookParams.contractParams.fundingDuration,
+      candidatePitches: hookParams.contractParams.candidatePitches || [],
+      acceptedToken: hookParams.contractParams.acceptedToken,
+      minContribution: hookParams.contractParams.minContribution,
+      maxContribution: hookParams.contractParams.maxContribution || BigInt(0),
+    }
     : undefined;
 
   // Simulate contract call - only runs when manually triggered
@@ -110,14 +112,16 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
   } = useSimulateContract({
     address: factoryAddress,
     abi: CrowdVCFactoryABI,
-    functionName: 'createPool',
+    functionName: "createPool",
     args: poolParams ? [poolParams] : undefined,
-    gas: GAS_LIMITS.CREATE_POOL,
+    // gas: GAS_LIMITS.CREATE_POOL,
     query: {
       // Only run simulation when manually triggered
       enabled: simulationTriggered && !!poolParams,
     },
   });
+  const config = useConfig();
+
   const {
     writeContractAsync,
     writeContract,
@@ -136,10 +140,12 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
     hash,
   });
 
-  const [dbData, setDbData] = useState<Omit<
-    CreatePoolDatabaseParams,
-    'contractAddress'
-  > | null>(null);
+  const [dbData, setDbData] = useState<
+    Omit<
+      CreatePoolDatabaseParams,
+      "contractAddress"
+    > | null
+  >(null);
   const [isCreatingDb, setIsCreatingDb] = useState(false);
   const [dbError, setDbError] = useState<Error | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -156,11 +162,11 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
         const logs = parseEventLogs({
           abi: CrowdVCFactoryABI,
           logs: receipt.logs,
-          eventName: 'PoolDeployed',
+          eventName: "PoolDeployed",
         });
 
         if (logs.length === 0) {
-          throw new Error('Pool deployment event not found in transaction');
+          throw new Error("Pool deployment event not found in transaction");
         }
 
         // Extract pool address from the event args
@@ -170,9 +176,9 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
         const poolAddress = eventLog.args.poolAddress;
 
         // Save to database with contract address
-        const response = await fetch('/api/admin/pools', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/admin/pools", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...dbData,
             contractAddress: poolAddress,
@@ -181,17 +187,18 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to save pool to database');
+          throw new Error(errorData.error || "Failed to save pool to database");
         }
 
         // Invalidate queries to refresh pool list
-        queryClient.invalidateQueries({ queryKey: ['admin-pools'] });
+        queryClient.invalidateQueries({ queryKey: ["admin-pools"] });
 
         setDbData(null);
         setIsSuccess(true);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to save pool';
+        const errorMessage = err instanceof Error
+          ? err.message
+          : "Failed to save pool";
         setDbError(new Error(errorMessage));
       } finally {
         setIsCreatingDb(false);
@@ -206,11 +213,10 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
    * This uses the pre-validated simulation data for better UX
    */
   const createPoolFromSimulation = useCallback(
-    (databaseParams: Omit<CreatePoolDatabaseParams, 'contractAddress'>) => {
-      if (!simulationData?.request) {
-        throw new Error('Simulation not ready. Please wait for validation.');
-      }
-
+    (
+      databaseParams: Omit<CreatePoolDatabaseParams, "contractAddress">,
+      request: WriteContractRequest,
+    ) => {
       // Reset state
       setDbError(null);
       setIsSuccess(false);
@@ -219,9 +225,9 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
       setDbData(databaseParams);
 
       // Execute the pre-validated transaction
-      writeContract(simulationData.request);
+      writeContract(request);
     },
-    [simulationData, writeContract],
+    [writeContract],
   );
 
   /**
@@ -262,12 +268,12 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
         return await writeContractAsync({
           address: factoryAddress,
           abi: CrowdVCFactoryABI,
-          functionName: 'createPool',
+          functionName: "createPool",
           args: [contractPoolParams],
           gas: GAS_LIMITS.CREATE_POOL,
         });
       } catch (error) {
-        console.error('Failed to create pool:', error);
+        console.error("Failed to create pool:", error);
         setDbData(null);
         throw error;
       }
@@ -293,14 +299,19 @@ export function useCreatePool(hookParams?: UseCreatePoolHookParams) {
    */
   const triggerSimulation = useCallback(async () => {
     if (!poolParams) {
-      throw new Error('Contract params are required for simulation');
+      throw new Error("Contract params are required for simulation");
     }
     setSimulationTriggered(true);
     // The simulation will run due to the enabled flag change
     // We need to wait for it to complete
-    const result = await refetchSimulation();
+    const result = await simulateContract(config, {
+      address: factoryAddress,
+      abi: CrowdVCFactoryABI,
+      functionName: "createPool",
+      args: [poolParams],
+    });
     return result;
-  }, [poolParams, refetchSimulation]);
+  }, [poolParams, factoryAddress, config]);
 
   return {
     // Actions
