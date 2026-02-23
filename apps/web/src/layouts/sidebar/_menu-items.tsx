@@ -29,12 +29,6 @@ export const defaultMenuItems = [
     icon: <PoolIcon />,
     href: routes.pools,
   },
-  // TODO: Fix route - page exists at /dashboard/vote but link points to /dashboard/voting
-  {
-    name: 'Voting',
-    icon: <VoteIcon />,
-    href: routes.voting,
-  },
   {
     name: 'Submit Pitch',
     icon: <PlusCircle />,

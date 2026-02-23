@@ -377,12 +377,19 @@ function PoolDetailsContent() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={castVote.isLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmVote}
-              disabled={castVote.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmVote();
+              }}
+              disabled={castVote.isLoading}
             >
-              {castVote.isPending ? 'Casting Vote...' : 'Confirm Vote'}
+              {castVote.isPending
+                ? 'Casting Vote...'
+                : castVote.isConfirming
+                  ? 'Confirming...'
+                  : 'Confirm Vote'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

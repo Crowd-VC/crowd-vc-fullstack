@@ -4,6 +4,19 @@ Complete API reference for the CrowdVC platform.
 
 ---
 
+## Architectural Improvements & Standards
+
+This API documentation adheres to the following principles to ensure scalability, precision, and consistency:
+
+1. **Standardized Response Envelope**: All successful responses are wrapped in a `data` object. List endpoints include a `meta` object for pagination. This standardizes frontend data fetching and simplifies generic API clients.
+2. **Web3 Data Types**: All financial and token amounts (e.g., `amount`, `fundingGoal`, `currentFunding`) are typed as `string` instead of `number`. This prevents precision loss in JavaScript since Web3 values (like Wei) often exceed `Number.MAX_SAFE_INTEGER`.
+3. **Pagination**: All list endpoints accept `page` and `limit` query parameters to prevent performance degradation as the platform grows.
+4. **Primary Identifiers**: Since this is a Web3 platform, `walletAddress` is used as the primary identifier for user actions (Voting, Contributions), removing redundant `userId` parameters.
+5. **RESTful Conventions**: Actions on specific relationships, like removing a startup from a pool, use path parameters (e.g., `DELETE /api/admin/pools/{id}/startups/{pitchId}`) rather than query parameters.
+6. **Server-Side ID Generation**: Creation endpoints do not accept IDs (e.g., `pitchId` or `poolId`) in the request body. Unique identifiers are generated securely by the server.
+
+---
+
 ## Table of Contents
 
 1. [Pools API](#pools-api)
@@ -24,27 +37,38 @@ Retrieve all active pools available for investors.
 
 **Endpoint:** `GET /api/pools`
 
+**Query Parameters:**
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
+
 **Response:**
 ```json
-[
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "category": "string",
-    "status": "active | upcoming | closed",
-    "fundingGoal": "number",
-    "currentFunding": "number",
-    "votingDeadline": "ISO 8601 date",
-    "minContribution": "number",
-    "maxContribution": "number | null",
-    "contractAddress": "string",
-    "fundingDuration": "number | null",
-    "acceptedToken": "string | null",
-    "startupCount": "number",
-    "contributorCount": "number"
+{
+  "data": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "category": "string",
+      "status": "active | upcoming | closed",
+      "fundingGoal": "string",
+      "currentFunding": "string",
+      "votingDeadline": "ISO 8601 date",
+      "minContribution": "string",
+      "maxContribution": "string | null",
+      "contractAddress": "string",
+      "fundingDuration": "number | null",
+      "acceptedToken": "string | null",
+      "startupCount": "number",
+      "contributorCount": "number"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
   }
-]
+}
 ```
 
 **Status Codes:**
@@ -62,35 +86,37 @@ Retrieve detailed information about a specific pool including startups and votes
 - `id` (string, required) - Pool ID
 
 **Query Parameters:**
-- `userId` (string, optional) - User ID to check if they have voted
+- `walletAddress` (string, optional) - Wallet address to check if the user has voted
 
 **Response:**
 ```json
 {
-  "id": "string",
-  "name": "string",
-  "description": "string",
-  "category": "string",
-  "status": "active | upcoming | closed",
-  "fundingGoal": "number",
-  "currentFunding": "number",
-  "votingDeadline": "ISO 8601 date",
-  "minContribution": "number",
-  "maxContribution": "number | null",
-  "contractAddress": "string",
-  "startups": [
-    {
-      "id": "string",
-      "title": "string",
-      "summary": "string",
-      "voteCount": "number"
-    }
-  ],
-  "userVoted": "boolean",
-  "userVote": {
-    "pitchId": "string",
-    "createdAt": "ISO 8601 date"
-  } | null
+  "data": {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+    "category": "string",
+    "status": "active | upcoming | closed",
+    "fundingGoal": "string",
+    "currentFunding": "string",
+    "votingDeadline": "ISO 8601 date",
+    "minContribution": "string",
+    "maxContribution": "string | null",
+    "contractAddress": "string",
+    "startups": [
+      {
+        "id": "string",
+        "title": "string",
+        "summary": "string",
+        "voteCount": "number"
+      }
+    ],
+    "userVoted": "boolean",
+    "userVote": {
+      "pitchId": "string",
+      "createdAt": "ISO 8601 date"
+    } | null
+  }
 }
 ```
 
@@ -111,8 +137,7 @@ Submit a new pitch to the platform.
 **Request Body:**
 ```json
 {
-  "pitchId": "string (required)",
-  "userId": "string (wallet address, optional)",
+  "walletAddress": "string (required)",
   "title": "string (required)",
   "summary": "string (required)",
   "elevatorPitch": "string (required)",
@@ -122,12 +147,12 @@ Submit a new pitch to the platform.
   "location": "string (required)",
   "website": "string (optional)",
   "oneKeyMetric": "string (required)",
-  "fundingGoal": "number | 'custom' (required)",
-  "customAmount": "number (optional)",
-  "productDevelopment": "number (optional)",
-  "marketingSales": "number (optional)",
-  "teamExpansion": "number (optional)",
-  "operations": "number (optional)",
+  "fundingGoal": "string | 'custom' (required)",
+  "customAmount": "string (optional)",
+  "productDevelopment": "number (optional, percentage)",
+  "marketingSales": "number (optional, percentage)",
+  "teamExpansion": "number (optional, percentage)",
+  "operations": "number (optional, percentage)",
   "timeToRaise": "string (optional)",
   "expectedROI": "string (optional)",
   "pitchDeckUrl": "string (optional)",
@@ -141,15 +166,13 @@ Submit a new pitch to the platform.
 **Response:**
 ```json
 {
-  "success": true,
   "data": {
     "id": "string",
-    "userId": "string",
+    "walletAddress": "string",
     "submissionId": "string",
     "title": "string",
     "status": "pending",
-    "reviewTimeline": "3-5 business days",
-    ...
+    "reviewTimeline": "3-5 business days"
   },
   "message": "Pitch submitted successfully"
 }
@@ -168,23 +191,28 @@ Retrieve all pitches with optional status filtering.
 
 **Query Parameters:**
 - `status` (string, optional) - Filter by status: `pending`, `approved`, `rejected`, `in-pool`, `under-review`, `shortlisted`, `needs-more-info`
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
 
 **Response:**
 ```json
 {
-  "success": true,
   "data": [
     {
       "id": "string",
-      "userId": "string",
+      "walletAddress": "string",
       "submissionId": "string",
       "title": "string",
       "summary": "string",
       "status": "string",
-      "createdAt": "ISO 8601 date",
-      ...
+      "createdAt": "ISO 8601 date"
     }
-  ]
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 120
+  }
 }
 ```
 
@@ -202,20 +230,27 @@ Retrieve all pitches for a specific user by wallet address.
 **Path Parameters:**
 - `address` (string, required) - Wallet address
 
+**Query Parameters:**
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
+
 **Response:**
 ```json
 {
-  "success": true,
   "data": [
     {
       "id": "string",
       "title": "string",
       "status": "string",
       "submissionId": "string",
-      "createdAt": "ISO 8601 date",
-      ...
+      "createdAt": "ISO 8601 date"
     }
-  ]
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 3
+  }
 }
 ```
 
@@ -244,8 +279,9 @@ Send status notification email to pitch submitter.
 **Response:**
 ```json
 {
-  "success": true,
-  "messageId": "string",
+  "data": {
+    "messageId": "string"
+  },
   "message": "Email sent successfully"
 }
 ```
@@ -269,11 +305,10 @@ Record a new contribution to a pool.
 ```json
 {
   "poolId": "string (required)",
-  "userId": "string (required)",
   "walletAddress": "string (required)",
-  "amount": "number (required, must be positive)",
-  "platformFee": "number (optional, defaults to 5)",
-  "gasFee": "number (optional, defaults to 0)",
+  "amount": "string (required, positive token amount in Wei or lowest denomination)",
+  "platformFee": "string (optional, defaults to 5%)",
+  "gasFee": "string (optional, defaults to 0)",
   "transactionHash": "string (optional)"
 }
 ```
@@ -281,16 +316,17 @@ Record a new contribution to a pool.
 **Response:**
 ```json
 {
-  "id": "string",
-  "poolId": "string",
-  "userId": "string",
-  "walletAddress": "string",
-  "amount": "number",
-  "platformFee": "number",
-  "gasFee": "number",
-  "status": "confirmed",
-  "transactionHash": "string | null",
-  "createdAt": "ISO 8601 date"
+  "data": {
+    "id": "string",
+    "poolId": "string",
+    "walletAddress": "string",
+    "amount": "string",
+    "platformFee": "string",
+    "gasFee": "string",
+    "status": "confirmed",
+    "transactionHash": "string | null",
+    "createdAt": "ISO 8601 date"
+  }
 }
 ```
 
@@ -302,30 +338,38 @@ Record a new contribution to a pool.
 ---
 
 ### Get Contributions
-Retrieve contributions by pool or user.
+Retrieve contributions by pool or wallet address.
 
 **Endpoint:** `GET /api/contributions`
 
 **Query Parameters (one required):**
 - `poolId` (string, optional) - Get contributions for a specific pool
-- `userId` (string, optional) - Get contributions for a specific user
+- `walletAddress` (string, optional) - Get contributions for a specific wallet address
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
 
 **Response:**
 ```json
-[
-  {
-    "id": "string",
-    "poolId": "string",
-    "userId": "string",
-    "walletAddress": "string",
-    "amount": "number",
-    "platformFee": "number",
-    "gasFee": "number",
-    "status": "pending | confirmed | failed",
-    "transactionHash": "string | null",
-    "createdAt": "ISO 8601 date"
+{
+  "data": [
+    {
+      "id": "string",
+      "poolId": "string",
+      "walletAddress": "string",
+      "amount": "string",
+      "platformFee": "string",
+      "gasFee": "string",
+      "status": "pending | confirmed | failed",
+      "transactionHash": "string | null",
+      "createdAt": "ISO 8601 date"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 45
   }
-]
+}
 ```
 
 **Status Codes:**
@@ -346,14 +390,14 @@ Retrieve a specific contribution.
 **Response:**
 ```json
 {
-  "id": "string",
-  "poolId": "string",
-  "userId": "string",
-  "walletAddress": "string",
-  "amount": "number",
-  "status": "pending | confirmed | failed",
-  "transactionHash": "string | null",
-  ...
+  "data": {
+    "id": "string",
+    "poolId": "string",
+    "walletAddress": "string",
+    "amount": "string",
+    "status": "pending | confirmed | failed",
+    "transactionHash": "string | null"
+  }
 }
 ```
 
@@ -383,11 +427,12 @@ Update the status of a contribution.
 **Response:**
 ```json
 {
-  "id": "string",
-  "status": "string",
-  "transactionHash": "string | null",
-  "updatedAt": "ISO 8601 date",
-  ...
+  "data": {
+    "id": "string",
+    "status": "string",
+    "transactionHash": "string | null",
+    "updatedAt": "ISO 8601 date"
+  }
 }
 ```
 
@@ -413,7 +458,6 @@ Vote for a startup in a pool.
 ```json
 {
   "pitchId": "string (required)",
-  "userId": "string (required)",
   "walletAddress": "string (required)"
 }
 ```
@@ -421,12 +465,13 @@ Vote for a startup in a pool.
 **Response:**
 ```json
 {
-  "id": "string",
-  "poolId": "string",
-  "pitchId": "string",
-  "userId": "string",
-  "walletAddress": "string",
-  "createdAt": "ISO 8601 date"
+  "data": {
+    "id": "string",
+    "poolId": "string",
+    "pitchId": "string",
+    "walletAddress": "string",
+    "createdAt": "ISO 8601 date"
+  }
 }
 ```
 
@@ -450,7 +495,6 @@ Retrieve user information by wallet address.
 **Response:**
 ```json
 {
-  "success": true,
   "data": {
     "id": "string",
     "email": "string",
@@ -489,7 +533,6 @@ Create a new user or update existing user by wallet address.
 **Response:**
 ```json
 {
-  "success": true,
   "data": {
     "id": "string",
     "email": "string",
@@ -498,7 +541,7 @@ Create a new user or update existing user by wallet address.
     "userType": "string",
     "createdAt": "ISO 8601 date"
   },
-  "message": "Profile created successfully" | "Profile updated successfully"
+  "message": "Profile created successfully"
 }
 ```
 
@@ -518,22 +561,32 @@ Retrieve all pools (admin access).
 
 **Endpoint:** `GET /api/admin/pools`
 
+**Query Parameters:**
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
+
 **Response:**
 ```json
-[
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "category": "string",
-    "status": "active | upcoming | closed",
-    "fundingGoal": "number",
-    "currentFunding": "number",
-    "votingDeadline": "ISO 8601 date",
-    "contractAddress": "string",
-    ...
+{
+  "data": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "category": "string",
+      "status": "active | upcoming | closed",
+      "fundingGoal": "string",
+      "currentFunding": "string",
+      "votingDeadline": "ISO 8601 date",
+      "contractAddress": "string"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 25
   }
-]
+}
 ```
 
 **Status Codes:**
@@ -550,15 +603,14 @@ Create a new investment pool with smart contract integration.
 **Request Body:**
 ```json
 {
-  "id": "string (optional, auto-generated if not provided)",
   "name": "string (required)",
   "description": "string (required)",
   "category": "string (required)",
   "votingDeadline": "ISO 8601 date (required)",
   "status": "active | upcoming | closed (optional, defaults to 'upcoming')",
-  "fundingGoal": "number (optional, defaults to 0)",
-  "minContribution": "number (optional, defaults to 1000)",
-  "maxContribution": "number (optional)",
+  "fundingGoal": "string (optional, defaults to 0)",
+  "minContribution": "string (optional, defaults to 1000)",
+  "maxContribution": "string (optional)",
   "contractAddress": "string (required)",
   "fundingDuration": "number (optional)",
   "acceptedToken": "string (optional)"
@@ -568,14 +620,15 @@ Create a new investment pool with smart contract integration.
 **Response:**
 ```json
 {
-  "id": "string",
-  "name": "string",
-  "description": "string",
-  "category": "string",
-  "status": "string",
-  "contractAddress": "string",
-  "createdAt": "ISO 8601 date",
-  ...
+  "data": {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+    "category": "string",
+    "status": "string",
+    "contractAddress": "string",
+    "createdAt": "ISO 8601 date"
+  }
 }
 ```
 
@@ -597,11 +650,12 @@ Retrieve a specific pool.
 **Response:**
 ```json
 {
-  "id": "string",
-  "name": "string",
-  "description": "string",
-  "status": "string",
-  ...
+  "data": {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+    "status": "string"
+  }
 }
 ```
 
@@ -630,10 +684,11 @@ Update the status of a pool.
 **Response:**
 ```json
 {
-  "id": "string",
-  "status": "string",
-  "updatedAt": "ISO 8601 date",
-  ...
+  "data": {
+    "id": "string",
+    "status": "string",
+    "updatedAt": "ISO 8601 date"
+  }
 }
 ```
 
@@ -655,15 +710,16 @@ Retrieve all startups assigned to a pool.
 
 **Response:**
 ```json
-[
-  {
-    "id": "string",
-    "title": "string",
-    "summary": "string",
-    "status": "string",
-    ...
-  }
-]
+{
+  "data": [
+    {
+      "id": "string",
+      "title": "string",
+      "summary": "string",
+      "status": "string"
+    }
+  ]
+}
 ```
 
 **Status Codes:**
@@ -690,7 +746,7 @@ Add a startup (pitch) to a pool.
 **Response:**
 ```json
 {
-  "success": true
+  "message": "Startup assigned to pool successfully"
 }
 ```
 
@@ -704,18 +760,16 @@ Add a startup (pitch) to a pool.
 ### Remove Startup from Pool (Admin)
 Remove a startup from a pool.
 
-**Endpoint:** `DELETE /api/admin/pools/{id}/startups`
+**Endpoint:** `DELETE /api/admin/pools/{id}/startups/{pitchId}`
 
 **Path Parameters:**
 - `id` (string, required) - Pool ID
-
-**Query Parameters:**
 - `pitchId` (string, required) - Pitch ID to remove
 
 **Response:**
 ```json
 {
-  "success": true
+  "message": "Startup removed from pool successfully"
 }
 ```
 
@@ -733,10 +787,14 @@ Retrieve all pitches with associated user information.
 
 **Endpoint:** `GET /api/admin/pitches`
 
+**Query Parameters:**
+- `page` (number, optional) - Page number, defaults to 1
+- `limit` (number, optional) - Items per page, defaults to 10
+
 **Response:**
 ```json
 {
-  "pitches": [
+  "data": [
     {
       "id": "string",
       "title": "string",
@@ -749,10 +807,14 @@ Retrieve all pitches with associated user information.
         "walletAddress": "string"
       },
       "submissionId": "string",
-      "createdAt": "ISO 8601 date",
-      ...
+      "createdAt": "ISO 8601 date"
     }
-  ]
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 150
+  }
 }
 ```
 
@@ -773,7 +835,7 @@ Retrieve detailed information about a specific pitch.
 **Response:**
 ```json
 {
-  "pitch": {
+  "data": {
     "id": "string",
     "title": "string",
     "summary": "string",
@@ -787,8 +849,7 @@ Retrieve detailed information about a specific pitch.
     },
     "industry": "string",
     "companyStage": "string",
-    "fundingGoal": "number",
-    ...
+    "fundingGoal": "string"
   }
 }
 ```
@@ -821,14 +882,14 @@ Approve or reject a pitch and send notification email.
 **Response:**
 ```json
 {
-  "success": true,
-  "pitch": {
+  "data": {
     "id": "string",
     "status": "string",
-    "updatedAt": "ISO 8601 date",
-    ...
+    "updatedAt": "ISO 8601 date"
   },
-  "emailSent": true | false
+  "meta": {
+    "emailSent": true
+  }
 }
 ```
 
@@ -858,10 +919,12 @@ Send transactional emails using Resend service.
 **Response:**
 ```json
 {
-  "id": "string",
-  "from": "CrowdVC <onboarding@resend.dev>",
-  "to": "string",
-  "created_at": "ISO 8601 date"
+  "data": {
+    "id": "string",
+    "from": "CrowdVC <onboarding@resend.dev>",
+    "to": "string",
+    "created_at": "ISO 8601 date"
+  }
 }
 ```
 
@@ -879,16 +942,6 @@ All endpoints return errors in a consistent format:
 {
   "error": "Error message description",
   "details": "Optional detailed error information"
-}
-```
-
-Or for endpoints with success flags:
-
-```json
-{
-  "success": false,
-  "error": "Error message description",
-  "message": "Optional additional context"
 }
 ```
 
@@ -912,9 +965,9 @@ Or for endpoints with success flags:
 3. **Wallet Addresses**: Must be valid Ethereum addresses (starting with "0x").
 4. **Smart Contracts**: Pool creation requires a valid contract address.
 5. **Email Service**: Uses Resend API (requires `RESEND_API_KEY` environment variable).
-6. **User Creation**: When submitting pitches, users are automatically created if they don't exist.
-7. **Vote Uniqueness**: One vote per user per pool (enforced at database level).
+6. **User Creation**: When submitting pitches, users are automatically created if they don't exist based on their wallet address.
+7. **Vote Uniqueness**: One vote per wallet address per pool (enforced at database level).
 
 ---
 
-*Last updated: 2026-01-29*
+*Last updated: 2026-02-21*

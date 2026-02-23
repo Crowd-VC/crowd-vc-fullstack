@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrowdVC — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A0A0A;--bg-elevated:#111111;--bg-card:#161616;--bg-card-hover:#1C1C1C;
+  --accent:#14B8A6;--accent-glow:rgba(20,184,166,.15);--accent-dim:rgba(20,184,166,.08);
+  --white:#FFFFFF;--grey-100:#F5F5F5;--grey-200:#E5E5E5;--grey-400:#999;--grey-500:#666;--grey-600:#444;--grey-700:#2A2A2A;--grey-800:#1A1A1A;
+  --radius-sm:8px;--radius-md:16px;--radius-lg:24px;--radius-xl:32px;--radius-pill:999px;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --transition:all .3s cubic-bezier(.4,0,.2,1);
+  --sidebar-width:72px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--white);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--grey-700);border-radius:3px}
+
+/* ==================== LAYOUT ==================== */
+.app{display:flex;min-height:100vh}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-width);background:var(--bg-elevated);border-right:1px solid rgba(255,255,255,.05);display:flex;flex-direction:column;align-items:center;padding:20px 0;z-index:100;gap:8px}
+.sidebar__logo{width:40px;height:40px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:24px;position:relative;overflow:hidden}
+.sidebar__logo::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2) 0%,transparent 50%);border-radius:inherit}
+.sidebar__logo svg{width:20px;height:20px;position:relative;z-index:1}
+.sidebar__item{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--grey-500);transition:var(--transition);cursor:pointer;position:relative}
+.sidebar__item:hover{background:rgba(255,255,255,.06);color:var(--grey-200)}
+.sidebar__item.active{background:var(--accent-dim);color:var(--accent)}
+.sidebar__item.active::before{content:'';position:absolute;left:-16px;width:3px;height:20px;background:var(--accent);border-radius:0 2px 2px 0}
+.sidebar__item svg{width:20px;height:20px}
+.sidebar__spacer{flex:1}
+.sidebar__avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ec4899);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;cursor:pointer;transition:var(--transition);border:2px solid transparent}
+.sidebar__avatar:hover{border-color:var(--accent)}
+
+/* ==================== TOPBAR ==================== */
+.topbar{position:fixed;top:0;left:var(--sidebar-width);right:0;height:64px;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;padding:0 32px;z-index:90}
+.topbar__left{display:flex;align-items:center;gap:20px}
+.topbar__search{display:flex;align-items:center;gap:10px;padding:8px 18px;border-radius:var(--radius-pill);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);width:280px;transition:var(--transition)}
+.topbar__search:focus-within{border-color:rgba(20,184,166,.3);background:rgba(255,255,255,.06)}
+.topbar__search svg{width:16px;height:16px;color:var(--grey-500);flex-shrink:0}
+.topbar__search input{background:none;border:none;outline:none;color:var(--white);font-family:var(--font-body);font-size:.88rem;width:100%}
+.topbar__search input::placeholder{color:var(--grey-600)}
+.topbar__center{font-family:var(--font-display);font-size:1.1rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.topbar__center svg{width:18px;height:18px;color:var(--accent)}
+.topbar__right{display:flex;align-items:center;gap:16px}
+.topbar__icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--grey-400);transition:var(--transition);cursor:pointer;position:relative}
+.topbar__icon:hover{background:rgba(255,255,255,.06);color:var(--white)}
+.topbar__icon svg{width:18px;height:18px}
+.topbar__notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+
+/* ==================== MAIN ==================== */
+.main{margin-left:var(--sidebar-width);padding-top:64px;min-height:100vh;position:relative}
+.content{padding:32px;max-width:1400px}
+
+/* ==================== AMBIENT BG ==================== */
+.ambient-glow{position:fixed;top:-20%;right:-10%;width:60%;height:70%;background:radial-gradient(ellipse 60% 50% at 70% 30%,rgba(20,184,166,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+.ambient-glow-2{position:fixed;bottom:-30%;left:-15%;width:50%;height:60%;background:radial-gradient(ellipse 50% 50% at 30% 70%,rgba(20,184,166,.03) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* ==================== WELCOME BANNER ==================== */
+.welcome{margin-bottom:32px;position:relative}
+.welcome__row{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+.welcome__text h1{font-family:var(--font-display);font-size:1.8rem;font-weight:700;letter-spacing:-.03em;line-height:1.2;margin-bottom:6px}
+.welcome__text h1 span{color:var(--accent)}
+.welcome__text p{font-size:.92rem;color:var(--grey-400);line-height:1.5}
+.welcome__actions{display:flex;gap:10px;flex-shrink:0}
+.pill-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.pill-btn--primary{background:var(--accent);color:#000}
+.pill-btn--primary:hover{background:#0fd9c4;box-shadow:0 0 24px rgba(20,184,166,.3)}
+.pill-btn--glass{background:rgba(255,255,255,.06);color:var(--white);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px)}
+.pill-btn--glass:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.pill-btn .arrow{transition:transform .2s ease}
+.pill-btn:hover .arrow{transform:translateX(3px)}
+
+/* ==================== STATS ROW ==================== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
+.stat-card{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:24px;position:relative;overflow:hidden;transition:var(--transition)}
+.stat-card:hover{border-color:rgba(255,255,255,.1);transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s ease}
+.stat-card:hover::before{opacity:1}
+.stat-card__icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid rgba(255,255,255,.06)}
+.stat-card__icon svg{width:18px;height:18px}
+.stat-card__icon--teal{background:var(--accent-dim);color:var(--accent);border-color:rgba(20,184,166,.12)}
+.stat-card__icon--blue{background:rgba(59,130,246,.08);color:#3b82f6;border-color:rgba(59,130,246,.12)}
+.stat-card__icon--purple{background:rgba(139,92,246,.08);color:#8b5cf6;border-color:rgba(139,92,246,.12)}
+.stat-card__icon--orange{background:rgba(249,115,22,.08);color:#f97316;border-color:rgba(249,115,22,.12)}
+.stat-card__val{font-family:var(--font-display);font-size:1.6rem;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+.stat-card__label{font-size:.78rem;color:var(--grey-500)}
+.stat-card__trend{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:var(--radius-pill)}
+.stat-card__trend--up{background:rgba(34,197,94,.1);color:#22c55e}
+.stat-card__trend--down{background:rgba(239,68,68,.1);color:#ef4444}
+
+/* ==================== SECTION COMMON ==================== */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.section-title{font-family:var(--font-display);font-size:1.3rem;font-weight:700;letter-spacing:-.03em}
+.section-subtitle{font-size:.85rem;color:var(--grey-500);margin-top:3px}
+.section-link{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;color:var(--grey-400);transition:var(--transition);cursor:pointer}
+.section-link:hover{color:var(--accent)}
+.section-link svg{width:16px;height:16px;transition:transform .2s ease}
+.section-link:hover svg{transform:translateX(3px)}
+
+/* ==================== FEATURED — 3-CARD BENTO ==================== */
+.featured-section{margin-bottom:40px}
+.featured-bento{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:380px;gap:16px}
+.featured-card{position:relative;border-radius:var(--radius-xl);overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,.06);transition:var(--transition)}
+.featured-card:hover{border-color:rgba(255,255,255,.15);box-shadow:0 16px 48px rgba(0,0,0,.4)}
+.featured-card:hover .featured-card__img{transform:scale(1.05)}
+.featured-card__img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.4,0,.2,1);position:absolute;inset:0}
+.featured-card__overlay{position:absolute;inset:0;z-index:2}
+.featured-card--main .featured-card__overlay{background:linear-gradient(0deg,rgba(0,0,0,.88) 0%,rgba(0,0,0,.25) 40%,rgba(0,0,0,.05) 65%)}
+.featured-card--side .featured-card__overlay{background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.35) 45%,rgba(0,0,0,.08) 70%)}
+.featured-card__content{position:absolute;bottom:0;left:0;right:0;padding:24px;z-index:3}
+.featured-card__badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-pill);font-size:.72rem;font-weight:600;backdrop-filter:blur(8px);margin-bottom:12px}
+.featured-card__badge--featured{background:rgba(20,184,166,.18);color:var(--accent);border:1px solid rgba(20,184,166,.25)}
+.featured-card__badge--trending{background:rgba(249,115,22,.15);color:#fb923c;border:1px solid rgba(249,115,22,.2)}
+.featured-card__badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse-dot 2s ease infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.featured-card__title{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;margin-bottom:6px;line-height:1.2}
+.featured-card--main .featured-card__title{font-size:1.6rem}
+.featured-card--side .featured-card__title{font-size:1.15rem}
+.featured-card__desc{font-size:.84rem;color:var(--grey-200);line-height:1.5;display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px}
+.featured-card__meta{display:flex;gap:16px;align-items:center}
+.featured-card__meta-item{display:flex;align-items:center;gap:5px;font-size:.78rem;color:var(--grey-400)}
+.featured-card__meta-item svg{width:13px;height:13px}
+.featured-card__progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06);z-index:4}
+.featured-card__progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+
+/* ==================== MIDDLE ROW — POOLS + ACTIVITY ==================== */
+.middle-row{display:grid;grid-template-columns:1fr 380px;gap:24px;margin-bottom:40px}
+
+/* ==================== POOLS CAROUSEL ==================== */
+.pools-section{}
+.pools-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;-ms-overflow-style:none;scrollbar-width:none}
+.pools-scroll::-webkit-scrollbar{display:none}
+.pool-card{min-width:260px;max-width:260px;background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);overflow:hidden;transition:var(--transition);cursor:pointer;flex-shrink:0;position:relative}
+.pool-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.pool-card__header{padding:20px 20px 14px;position:relative}
+.pool-card__header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.pool-card--active .pool-card__header::before{background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+.pool-card--upcoming .pool-card__header::before{background:linear-gradient(90deg,#f59e0b,#f97316)}
+.pool-card--closed .pool-card__header::before{background:linear-gradient(90deg,var(--grey-600),var(--grey-500))}
+.pool-card__tags{display:flex;gap:5px;margin-bottom:12px}
+.pool-card__tag{padding:3px 10px;border-radius:var(--radius-pill);font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pool-card__tag--active{background:rgba(20,184,166,.12);color:var(--accent)}
+.pool-card__tag--upcoming{background:rgba(245,158,11,.12);color:#f59e0b}
+.pool-card__tag--closed{background:rgba(255,255,255,.06);color:var(--grey-500)}
+.pool-card__tag--category{background:rgba(255,255,255,.04);color:var(--grey-400)}
+.pool-card__name{font-family:var(--font-display);font-size:1rem;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.pool-card__desc{font-size:.8rem;color:var(--grey-500);line-height:1.5;display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pool-card__body{padding:0 20px 18px}
+.pool-card__progress{height:4px;border-radius:2px;background:rgba(255,255,255,.06);margin:14px 0 12px;overflow:hidden}
+.pool-card__progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+.pool-card__stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.pool-card__stat{text-align:center}
+.pool-card__stat-val{font-family:var(--font-display);font-size:.85rem;font-weight:700}
+.pool-card__stat-label{font-size:.65rem;color:var(--grey-600);margin-top:1px}
+
+/* ==================== ACTIVITY FEED ==================== */
+.activity-panel{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:24px;overflow:hidden}
+.activity-panel__title{font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;letter-spacing:-.01em}
+.activity-panel__title svg{width:16px;height:16px;color:var(--accent)}
+.activity-list{display:flex;flex-direction:column;gap:0}
+.activity-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start}
+.activity-item:last-child{border-bottom:none}
+.activity-item__icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.activity-item__icon svg{width:15px;height:15px}
+.activity-item__icon--fund{background:rgba(20,184,166,.1);color:var(--accent)}
+.activity-item__icon--vote{background:rgba(139,92,246,.1);color:#8b5cf6}
+.activity-item__icon--pitch{background:rgba(59,130,246,.1);color:#3b82f6}
+.activity-item__icon--milestone{background:rgba(34,197,94,.1);color:#22c55e}
+.activity-item__icon--join{background:rgba(249,115,22,.1);color:#f97316}
+.activity-item__body{flex:1;min-width:0}
+.activity-item__text{font-size:.82rem;color:var(--grey-200);line-height:1.4}
+.activity-item__text strong{color:var(--white);font-weight:600}
+.activity-item__text .hl{color:var(--accent)}
+.activity-item__time{font-size:.7rem;color:var(--grey-600);margin-top:3px}
+
+/* ==================== YOUR PORTFOLIO ==================== */
+.portfolio-section{margin-bottom:40px}
+.portfolio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.portfolio-card{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:20px;transition:var(--transition);cursor:pointer}
+.portfolio-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-3px)}
+.portfolio-card__top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.portfolio-card__avatar{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0}
+.portfolio-card__info{flex:1;min-width:0}
+.portfolio-card__name{font-family:var(--font-display);font-size:.92rem;font-weight:600;letter-spacing:-.01em}
+.portfolio-card__pool{font-size:.72rem;color:var(--grey-500)}
+.portfolio-card__status{padding:3px 10px;border-radius:var(--radius-pill);font-size:.68rem;font-weight:600}
+.portfolio-card__status--active{background:rgba(20,184,166,.12);color:var(--accent)}
+.portfolio-card__status--pending{background:rgba(245,158,11,.12);color:#f59e0b}
+.portfolio-card__status--completed{background:rgba(34,197,94,.12);color:#22c55e}
+.portfolio-card__stats-row{display:flex;gap:16px}
+.portfolio-card__stat{flex:1}
+.portfolio-card__stat-label{font-size:.7rem;color:var(--grey-600);margin-bottom:3px}
+.portfolio-card__stat-val{font-family:var(--font-display);font-size:.88rem;font-weight:700}
+.portfolio-card__bar{height:3px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:14px;overflow:hidden}
+.portfolio-card__bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+
+/* ==================== INDUSTRY CAROUSELS ==================== */
+.industry-section{margin-bottom:40px}
+.startup-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;-ms-overflow-style:none;scrollbar-width:none}
+.startup-scroll::-webkit-scrollbar{display:none}
+.startup-card{min-width:280px;max-width:280px;background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);overflow:hidden;transition:var(--transition);cursor:pointer;flex-shrink:0}
+.startup-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-5px);box-shadow:0 14px 44px rgba(0,0,0,.5)}
+.startup-card__img-wrap{position:relative;height:180px;overflow:hidden}
+.startup-card__img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.startup-card:hover .startup-card__img{transform:scale(1.06)}
+.startup-card__img-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(22,22,22,1) 0%,rgba(22,22,22,.15) 40%,transparent 70%)}
+.startup-card__progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06);z-index:2}
+.startup-card__progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+.startup-card__body{padding:16px 18px 18px}
+.startup-card__top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.startup-card__avatar{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.startup-card__avatar--orange{background:linear-gradient(135deg,#f97316,#ec4899)}
+.startup-card__avatar--teal{background:linear-gradient(135deg,#14b8a6,#06b6d4)}
+.startup-card__avatar--purple{background:linear-gradient(135deg,#8b5cf6,#ec4899)}
+.startup-card__avatar--blue{background:linear-gradient(135deg,#3b82f6,#8b5cf6)}
+.startup-card__title{font-family:var(--font-display);font-size:.95rem;font-weight:600;letter-spacing:-.01em}
+.startup-card__status{margin-left:auto;padding:3px 9px;border-radius:var(--radius-pill);font-size:.66rem;font-weight:600}
+.startup-card__status--approved{background:rgba(34,197,94,.12);color:#22c55e}
+.startup-card__status--pending{background:rgba(245,158,11,.12);color:#f59e0b}
+.startup-card__status--in-pool{background:rgba(59,130,246,.12);color:#3b82f6}
+.startup-card__desc{font-size:.8rem;color:var(--grey-500);line-height:1.5;display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px}
+.startup-card__footer{display:flex;gap:14px}
+.startup-card__footer-item{display:flex;align-items:center;gap:4px;font-size:.73rem;color:var(--grey-500)}
+.startup-card__footer-item svg{width:12px;height:12px}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:fadeUp .65s cubic-bezier(.4,0,.2,1) forwards}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}.d5{animation-delay:.25s}.d6{animation-delay:.3s}.d7{animation-delay:.35s}.d8{animation-delay:.4s}.d9{animation-delay:.45s}.d10{animation-delay:.5s}
+
+/* ==================== RESPONSIVE ==================== */
+@media(max-width:1200px){
+  .middle-row{grid-template-columns:1fr}
+  .activity-panel{max-height:320px;overflow-y:auto}
+  .portfolio-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:1024px){
+  .featured-bento{grid-template-columns:1fr 1fr;grid-template-rows:280px 280px}
+  .featured-bento .featured-card:first-child{grid-column:1/-1}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  :root{--sidebar-width:0px}
+  .sidebar{display:none}
+  .content{padding:20px}
+  .featured-bento{grid-template-columns:1fr;grid-template-rows:auto}
+  .featured-bento .featured-card{height:260px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .portfolio-grid{grid-template-columns:1fr}
+  .middle-row{grid-template-columns:1fr}
+  .topbar__search{width:160px}
+  .welcome__row{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="ambient-glow"></div>
+<div class="ambient-glow-2"></div>
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="sidebar">
+  <div class="sidebar__logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+  </div>
+  <div class="sidebar__item active" title="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  </div>
+  <div class="sidebar__item" title="Pools">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v10"/></svg>
+  </div>
+  <div class="sidebar__item" title="Pitches">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  </div>
+  <div class="sidebar__item" title="Vote">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+  </div>
+  <div class="sidebar__item" title="Analytics">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+  </div>
+  <div class="sidebar__item" title="Wallet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+  </div>
+  <div class="sidebar__spacer"></div>
+  <div class="sidebar__item" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <div class="sidebar__avatar">R</div>
+</aside>
+
+<!-- ============ TOPBAR ============ -->
+<header class="topbar">
+  <div class="topbar__left">
+    <div class="topbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search pools, startups...">
+    </div>
+  </div>
+  <div class="topbar__center">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    Crowd VC
+  </div>
+  <div class="topbar__right">
+    <div class="topbar__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="topbar__notif-dot"></span>
+    </div>
+    <div class="topbar__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    </div>
+    <div class="sidebar__avatar" style="width:32px;height:32px;font-size:.7rem">R</div>
+  </div>
+</header>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+<div class="content">
+
+  <!-- ======== 1. WELCOME ======== -->
+  <div class="welcome anim d1">
+    <div class="welcome__row">
+      <div class="welcome__text">
+        <h1>Welcome back, <span>Rahman</span></h1>
+        <p>Track your investments, discover new pools, and vote on the most promising startups.</p>
+      </div>
+      <div class="welcome__actions">
+        <a href="#" class="pill-btn pill-btn--primary">Explore Pools <span class="arrow">&rarr;</span></a>
+        <a href="#" class="pill-btn pill-btn--glass">Submit Pitch <span class="arrow">&nearr;</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 2. STATS ROW ======== -->
+  <div class="stats-row anim d2">
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="stat-card__val">$1.24M</div>
+      <div class="stat-card__label">Total Platform Funding</div>
+      <span class="stat-card__trend stat-card__trend--up">+12.4%</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v10"/></svg>
+      </div>
+      <div class="stat-card__val">14</div>
+      <div class="stat-card__label">Active Pools</div>
+      <span class="stat-card__trend stat-card__trend--up">+3</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-card__val">2,847</div>
+      <div class="stat-card__label">Total Investors</div>
+      <span class="stat-card__trend stat-card__trend--up">+8.2%</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-card__val">38</div>
+      <div class="stat-card__label">Startups Funded</div>
+      <span class="stat-card__trend stat-card__trend--up">+5</span>
+    </div>
+  </div>
+
+  <!-- ======== 3. FEATURED PITCHES — BENTO ======== -->
+  <section class="featured-section anim d3">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Featured Pitches</h2>
+        <p class="section-subtitle">Handpicked startups with the most community interest</p>
+      </div>
+      <a href="#" class="section-link">View All Pitches <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="featured-bento">
+      <!-- Main -->
+      <div class="featured-card featured-card--main">
+        <img src="apps/web/public/images/startups/ecorise-featured.png" alt="EcoRise" class="featured-card__img" onerror="this.style.background='linear-gradient(135deg,#0d3d2e,#0a2a1f)'">
+        <div class="featured-card__overlay"></div>
+        <div class="featured-card__content">
+          <span class="featured-card__badge featured-card__badge--featured"><span class="featured-card__badge-dot"></span> Featured</span>
+          <h3 class="featured-card__title">EcoRise</h3>
+          <p class="featured-card__desc">Revolutionizing food production with eco-friendly, hyper-local urban farms. Building sustainable vertical farming infrastructure for communities.</p>
+          <div class="featured-card__meta">
+            <span class="featured-card__meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12 days left</span>
+            <span class="featured-card__meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> $45K raised</span>
+            <span class="featured-card__meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> 127 backers</span>
+          </div>
+        </div>
+        <div class="featured-card__progress"><div class="featured-card__progress-fill" style="width:42%"></div></div>
+      </div>
+      <!-- Side 1 -->
+      <div class="featured-card featured-card--side">
+        <img src="apps/web/public/images/startups/learnsphere-featured.png" alt="LearnSphere" class="featured-card__img" onerror="this.style.background='linear-gradient(135deg,#1e3a5f,#0f1f35)'">
+        <div class="featured-card__overlay"></div>
+        <div class="featured-card__content">
+          <span class="featured-card__badge featured-card__badge--trending"><span class="featured-card__badge-dot"></span> Trending</span>
+          <h3 class="featured-card__title">LearnSphere</h3>
+          <p class="featured-card__desc">Personalized learning paths with engaging content and real-time progress tracking.</p>
+          <div class="featured-card__meta">
+            <span class="featured-card__meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 8 days</span>
+            <span class="featured-card__meta-item">15% funded</span>
+          </div>
+        </div>
+        <div class="featured-card__progress"><div class="featured-card__progress-fill" style="width:15%"></div></div>
+      </div>
+      <!-- Side 2 -->
+      <div class="featured-card featured-card--side">
+        <img src="apps/web/public/images/startups/mintopia-featured.png" alt="Mintopia" class="featured-card__img" onerror="this.style.background='linear-gradient(135deg,#3b1f5e,#1a0e2e)'">
+        <div class="featured-card__overlay"></div>
+        <div class="featured-card__content">
+          <span class="featured-card__badge featured-card__badge--featured"><span class="featured-card__badge-dot"></span> Featured</span>
+          <h3 class="featured-card__title">Mintopia</h3>
+          <p class="featured-card__desc">The Shopify for NFTs — creators keep 95% of sales with zero gas fees.</p>
+          <div class="featured-card__meta">
+            <span class="featured-card__meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 5 days</span>
+            <span class="featured-card__meta-item">22% funded</span>
+          </div>
+        </div>
+        <div class="featured-card__progress"><div class="featured-card__progress-fill" style="width:22%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 4. POOLS + ACTIVITY (SIDE-BY-SIDE) ======== -->
+  <div class="middle-row anim d5">
+    <!-- Pools -->
+    <section class="pools-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Browse by Pools</h2>
+          <p class="section-subtitle">Explore investment pools and vote for your favorites</p>
+        </div>
+        <a href="#" class="section-link">View All Pools <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+      <div class="pools-scroll">
+        <div class="pool-card pool-card--active">
+          <div class="pool-card__header"><div class="pool-card__tags"><span class="pool-card__tag pool-card__tag--active">Active</span><span class="pool-card__tag pool-card__tag--category">HealthTech</span></div><h3 class="pool-card__name">HealthTech Q1 2026</h3><p class="pool-card__desc">Backing breakthrough healthcare and biotech startups transforming patient outcomes.</p></div>
+          <div class="pool-card__body"><div class="pool-card__progress"><div class="pool-card__progress-fill" style="width:68%"></div></div><div class="pool-card__stats"><div class="pool-card__stat"><div class="pool-card__stat-val">14d</div><div class="pool-card__stat-label">Deadline</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">8</div><div class="pool-card__stat-label">Startups</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">342</div><div class="pool-card__stat-label">Votes</div></div></div></div>
+        </div>
+        <div class="pool-card pool-card--active">
+          <div class="pool-card__header"><div class="pool-card__tags"><span class="pool-card__tag pool-card__tag--active">Active</span><span class="pool-card__tag pool-card__tag--category">GreenTech</span></div><h3 class="pool-card__name">Green Energy Fund</h3><p class="pool-card__desc">Clean energy and sustainability ventures accelerating the transition to renewables.</p></div>
+          <div class="pool-card__body"><div class="pool-card__progress"><div class="pool-card__progress-fill" style="width:45%"></div></div><div class="pool-card__stats"><div class="pool-card__stat"><div class="pool-card__stat-val">21d</div><div class="pool-card__stat-label">Deadline</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">12</div><div class="pool-card__stat-label">Startups</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">189</div><div class="pool-card__stat-label">Votes</div></div></div></div>
+        </div>
+        <div class="pool-card pool-card--upcoming">
+          <div class="pool-card__header"><div class="pool-card__tags"><span class="pool-card__tag pool-card__tag--upcoming">Upcoming</span><span class="pool-card__tag pool-card__tag--category">FinTech</span></div><h3 class="pool-card__name">DeFi Protocols Q2</h3><p class="pool-card__desc">Next-gen decentralized finance protocols building open financial infrastructure.</p></div>
+          <div class="pool-card__body"><div class="pool-card__progress"><div class="pool-card__progress-fill" style="width:0%"></div></div><div class="pool-card__stats"><div class="pool-card__stat"><div class="pool-card__stat-val">30d</div><div class="pool-card__stat-label">Opens in</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">—</div><div class="pool-card__stat-label">Startups</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">—</div><div class="pool-card__stat-label">Votes</div></div></div></div>
+        </div>
+        <div class="pool-card pool-card--active">
+          <div class="pool-card__header"><div class="pool-card__tags"><span class="pool-card__tag pool-card__tag--active">Active</span><span class="pool-card__tag pool-card__tag--category">EdTech</span></div><h3 class="pool-card__name">EdTech Innovation</h3><p class="pool-card__desc">Revolutionizing education through AI-powered learning platforms.</p></div>
+          <div class="pool-card__body"><div class="pool-card__progress"><div class="pool-card__progress-fill" style="width:82%"></div></div><div class="pool-card__stats"><div class="pool-card__stat"><div class="pool-card__stat-val">3d</div><div class="pool-card__stat-label">Deadline</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">6</div><div class="pool-card__stat-label">Startups</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">518</div><div class="pool-card__stat-label">Votes</div></div></div></div>
+        </div>
+        <div class="pool-card pool-card--active">
+          <div class="pool-card__header"><div class="pool-card__tags"><span class="pool-card__tag pool-card__tag--active">Active</span><span class="pool-card__tag pool-card__tag--category">AI / ML</span></div><h3 class="pool-card__name">AI Startups Fund</h3><p class="pool-card__desc">Most promising artificial intelligence and machine learning ventures.</p></div>
+          <div class="pool-card__body"><div class="pool-card__progress"><div class="pool-card__progress-fill" style="width:55%"></div></div><div class="pool-card__stats"><div class="pool-card__stat"><div class="pool-card__stat-val">18d</div><div class="pool-card__stat-label">Deadline</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">15</div><div class="pool-card__stat-label">Startups</div></div><div class="pool-card__stat"><div class="pool-card__stat-val">723</div><div class="pool-card__stat-label">Votes</div></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Feed -->
+    <div class="activity-panel">
+      <h3 class="activity-panel__title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Recent Activity
+      </h3>
+      <div class="activity-list">
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--fund"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><strong>0x7f3a...e2c1</strong> contributed <span class="hl">$2,500</span> to Green Energy Fund</div><div class="activity-item__time">2 minutes ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--vote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><strong>0x2d8b...f491</strong> voted for <span class="hl">Synaptek</span> in AI Startups Fund</div><div class="activity-item__time">8 minutes ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--milestone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><span class="hl">NexaFinance</span> completed milestone <strong>"Beta Launch"</strong></div><div class="activity-item__time">23 minutes ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--pitch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><span class="hl">VaultEdge</span> submitted a new pitch to FinTech pool</div><div class="activity-item__time">1 hour ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--fund"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><strong>0x9c4e...a8d3</strong> contributed <span class="hl">$5,000</span> to HealthTech Q1</div><div class="activity-item__time">1 hour ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--join"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><strong>47 new investors</strong> joined the platform this week</div><div class="activity-item__time">3 hours ago</div></div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__icon activity-item__icon--vote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></div>
+          <div class="activity-item__body"><div class="activity-item__text"><strong>0xab12...3ef7</strong> voted for <span class="hl">EcoRise</span> in Green Energy Fund</div><div class="activity-item__time">4 hours ago</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 5. YOUR PORTFOLIO ======== -->
+  <section class="portfolio-section anim d7">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Your Portfolio</h2>
+        <p class="section-subtitle">Startups you've backed and their milestone progress</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="portfolio-grid">
+      <div class="portfolio-card">
+        <div class="portfolio-card__top">
+          <div class="portfolio-card__avatar" style="background:linear-gradient(135deg,#14b8a6,#06b6d4)">E</div>
+          <div class="portfolio-card__info"><div class="portfolio-card__name">EcoRise</div><div class="portfolio-card__pool">Green Energy Fund</div></div>
+          <span class="portfolio-card__status portfolio-card__status--active">Active</span>
+        </div>
+        <div class="portfolio-card__stats-row">
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Your Investment</div><div class="portfolio-card__stat-val">$1,200</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Your Votes</div><div class="portfolio-card__stat-val">1,200</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Milestone</div><div class="portfolio-card__stat-val">1 / 4</div></div>
+        </div>
+        <div class="portfolio-card__bar"><div class="portfolio-card__bar-fill" style="width:25%"></div></div>
+      </div>
+      <div class="portfolio-card">
+        <div class="portfolio-card__top">
+          <div class="portfolio-card__avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">S</div>
+          <div class="portfolio-card__info"><div class="portfolio-card__name">Synaptek</div><div class="portfolio-card__pool">AI Startups Fund</div></div>
+          <span class="portfolio-card__status portfolio-card__status--pending">Voting</span>
+        </div>
+        <div class="portfolio-card__stats-row">
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Your Investment</div><div class="portfolio-card__stat-val">$3,500</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Your Votes</div><div class="portfolio-card__stat-val">3,500</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Pool Rank</div><div class="portfolio-card__stat-val">#2</div></div>
+        </div>
+        <div class="portfolio-card__bar"><div class="portfolio-card__bar-fill" style="width:85%"></div></div>
+      </div>
+      <div class="portfolio-card">
+        <div class="portfolio-card__top">
+          <div class="portfolio-card__avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">N</div>
+          <div class="portfolio-card__info"><div class="portfolio-card__name">NexaFinance</div><div class="portfolio-card__pool">DeFi Protocols Q1</div></div>
+          <span class="portfolio-card__status portfolio-card__status--completed">Funded</span>
+        </div>
+        <div class="portfolio-card__stats-row">
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Your Investment</div><div class="portfolio-card__stat-val">$800</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Released</div><div class="portfolio-card__stat-val">$320</div></div>
+          <div class="portfolio-card__stat"><div class="portfolio-card__stat-label">Milestone</div><div class="portfolio-card__stat-val">2 / 4</div></div>
+        </div>
+        <div class="portfolio-card__bar"><div class="portfolio-card__bar-fill" style="width:50%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 6. TRENDING STARTUPS ======== -->
+  <section class="industry-section anim d8">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Trending Startups</h2>
+        <p class="section-subtitle">Most popular pitches across all active pools</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="startup-scroll">
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/synaptek.png" alt="Synaptek" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1e2a4a,#0f1525)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:85%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--purple">S</div><span class="startup-card__title">Synaptek</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">Enterprise AI platform for real-time data analytics and predictive modeling.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 3 days</span><span class="startup-card__footer-item">85% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/nexafinance.png" alt="NexaFinance" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#0a2a3a,#05151f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:73%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">N</div><span class="startup-card__title">NexaFinance</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">Cross-chain DeFi aggregator optimizing yield strategies across 12+ networks.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 6 days</span><span class="startup-card__footer-item">73% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/vitalpath.png" alt="VitalPath" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1a2e4a,#0a1525)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:61%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--blue">V</div><span class="startup-card__title">VitalPath</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">AI-powered early disease detection using wearable biomarkers and analytics.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 9 days</span><span class="startup-card__footer-item">61% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/mintopia.png" alt="Mintopia" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#3b1f5e,#1a0e2e)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:22%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--purple">M</div><span class="startup-card__title">Mintopia</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">The Shopify for NFTs — creators keep 95% of sales with zero gas fees.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 5 days</span><span class="startup-card__footer-item">22% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/ecorise.png" alt="EcoRise" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#0d3d2e,#0a2a1f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:42%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">E</div><span class="startup-card__title">EcoRise</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Eco-friendly urban farms revolutionizing sustainable food production globally.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12 days</span><span class="startup-card__footer-item">42% funded</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 7. MORE STARTUPS BY INDUSTRY ======== -->
+  <section class="industry-section anim d9">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">FinTech & AI</h2>
+        <p class="section-subtitle">DeFi, Payments, Machine Learning, Data</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="startup-scroll">
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/vaultedge.png" alt="VaultEdge" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1a1a3a,#0a0a1f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:47%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--blue">V</div><span class="startup-card__title">VaultEdge</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Institutional-grade crypto custody with multi-sig governance and insurance.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10 days</span><span class="startup-card__footer-item">47% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/astrayield.png" alt="AstraYield" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#2a1a0a,#150d05)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:29%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--orange">A</div><span class="startup-card__title">AstraYield</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Automated yield farming optimizer using ML to maximize DeFi returns.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 16 days</span><span class="startup-card__footer-item">29% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/learnsphere.png" alt="LearnSphere" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1e3a5f,#0f1f35)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:15%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">L</div><span class="startup-card__title">LearnSphere</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">AI-powered personalized learning with engaging content and progress tracking.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 8 days</span><span class="startup-card__footer-item">15% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/neurocare.png" alt="NeuroCare" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#2a1a3e,#120b1f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:33%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--purple">N</div><span class="startup-card__title">NeuroCare</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Non-invasive neural interface for mental health monitoring and therapy.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 14 days</span><span class="startup-card__footer-item">33% funded</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 8. ENTERTAINMENT ======== -->
+  <section class="industry-section anim d10">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Entertainment</h2>
+        <p class="section-subtitle">NFT, Digital Art, Marketplace, Gaming</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="startup-scroll">
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/mintopia.png" alt="Mintopia" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#3b1f5e,#1a0e2e)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:22%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--purple">M</div><span class="startup-card__title">Mintopia</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">We're the Shopify for NFTs — creators keep 95% of sales with zero gas fees and instant settlement.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 5 days</span><span class="startup-card__footer-item">22% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/pixelhaven.png" alt="PixelHaven" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1e3a5f,#0f1f35)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:38%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--blue">P</div><span class="startup-card__title">PixelHaven</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">Immersive metaverse gaming platform where players truly own their in-game assets and economies.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 11 days</span><span class="startup-card__footer-item">38% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/artlink.png" alt="ArtLink" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#2d1b4e,#150e28)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:15%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--orange">A</div><span class="startup-card__title">ArtLink</span><span class="startup-card__status startup-card__status--pending">Pending</span></div><p class="startup-card__desc">Connecting independent digital artists with collectors through curated galleries and fair royalties.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 18 days</span><span class="startup-card__footer-item">15% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/mosaicx.png" alt="MosaicX" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1a3a4a,#0a1a25)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:51%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">M</div><span class="startup-card__title">MosaicX</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Collaborative art creation platform where communities co-create and co-own digital masterpieces.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 7 days</span><span class="startup-card__footer-item">51% funded</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 9. GREENTECH & HEALTH ======== -->
+  <section class="industry-section anim">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">GreenTech & Health</h2>
+        <p class="section-subtitle">Sustainability, Clean Energy, BioTech, HealthTech</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="startup-scroll">
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/ecorise.png" alt="EcoRise" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#0d3d2e,#0a2a1f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:42%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">E</div><span class="startup-card__title">EcoRise</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Revolutionizing food production with eco-friendly, hyper-local urban farms and vertical infrastructure.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12 days</span><span class="startup-card__footer-item">42% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/vitalpath.png" alt="VitalPath" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1a2e4a,#0a1525)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:61%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--blue">V</div><span class="startup-card__title">VitalPath</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">AI-powered early disease detection platform using wearable biomarkers and predictive analytics.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 9 days</span><span class="startup-card__footer-item">61% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/neurocare.png" alt="NeuroCare" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#2a1a3e,#120b1f)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:33%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--purple">N</div><span class="startup-card__title">NeuroCare</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Non-invasive neural interface for mental health monitoring and personalized cognitive therapy.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 14 days</span><span class="startup-card__footer-item">33% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/projectphoenix.png" alt="Project Phoenix" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#3a1a0e,#1f0e06)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:18%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--orange">P</div><span class="startup-card__title">Project Phoenix</span><span class="startup-card__status startup-card__status--pending">Pending</span></div><p class="startup-card__desc">Carbon capture technology that transforms industrial emissions into sustainable building materials.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 20 days</span><span class="startup-card__footer-item">18% funded</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 10. EDUCATION ======== -->
+  <section class="industry-section anim">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Education</h2>
+        <p class="section-subtitle">EdTech, E-Learning, Skill Development</p>
+      </div>
+      <a href="#" class="section-link">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="startup-scroll">
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/learnsphere.png" alt="LearnSphere" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#1e3a5f,#0f1f35)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:15%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--teal">L</div><span class="startup-card__title">LearnSphere</span><span class="startup-card__status startup-card__status--approved">Approved</span></div><p class="startup-card__desc">Make learning fun and effective with personalized paths, engaging content, and real-time progress tracking.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 8 days</span><span class="startup-card__footer-item">15% funded</span></div></div>
+      </div>
+      <div class="startup-card">
+        <div class="startup-card__img-wrap"><img src="apps/web/public/images/startups/ehub.png" alt="eHub" class="startup-card__img" onerror="this.style.background='linear-gradient(135deg,#2a2a0a,#151505)'"><div class="startup-card__img-overlay"></div><div class="startup-card__progress"><div class="startup-card__progress-fill" style="width:44%"></div></div></div>
+        <div class="startup-card__body"><div class="startup-card__top"><div class="startup-card__avatar startup-card__avatar--orange">e</div><span class="startup-card__title">eHub</span><span class="startup-card__status startup-card__status--in-pool">In Pool</span></div><p class="startup-card__desc">Decentralized credentialing and skill verification platform for the future of work and hiring.</p><div class="startup-card__footer"><span class="startup-card__footer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 13 days</span><span class="startup-card__footer-item">44% funded</span></div></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+</div>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.style.animationPlayState = 'running'; });
+}, { threshold: 0.08 });
+document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>

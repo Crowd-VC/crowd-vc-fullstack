@@ -118,6 +118,7 @@ export function useVote(
           abi: CrowdVCPoolABI,
           functionName: "vote",
           args: [pitchIdBytes32],
+          gas: GAS_LIMITS.VOTE,
         });
 
         toast.loading("Processing vote...", {

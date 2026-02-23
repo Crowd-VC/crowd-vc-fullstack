@@ -90,15 +90,14 @@ export function CreatePoolModal({ open, onOpenChange }: CreatePoolModalProps) {
     }
   };
 
-  // Calculate voting duration in seconds from deadline
+  // Calculate voting duration in seconds from now until the voting deadline
   const calculateVotingDuration = (): bigint => {
     if (!formData.votingDeadline) return BigInt(0);
-    if (!formData.pitchSubmissionDeadline) return BigInt(0);
 
     const deadlineTimestamp = new Date(formData.votingDeadline).getTime();
-    const submissionTimestamp = new Date(formData.pitchSubmissionDeadline).getTime();
+    const now = Date.now();
 
-    const durationMs = deadlineTimestamp - submissionTimestamp;
+    const durationMs = deadlineTimestamp - now;
     return BigInt(Math.max(0, Math.floor(durationMs / 1000)));
   };
 

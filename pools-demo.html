@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrowdVC — Investment Pools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A0A0A;--bg-elevated:#111111;--bg-card:#161616;--bg-card-hover:#1C1C1C;
+  --accent:#14B8A6;--accent-glow:rgba(20,184,166,.15);--accent-dim:rgba(20,184,166,.08);
+  --white:#FFFFFF;--grey-100:#F5F5F5;--grey-200:#E5E5E5;--grey-400:#999;--grey-500:#666;--grey-600:#444;--grey-700:#2A2A2A;--grey-800:#1A1A1A;
+  --radius-sm:8px;--radius-md:16px;--radius-lg:24px;--radius-xl:32px;--radius-pill:999px;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --transition:all .3s cubic-bezier(.4,0,.2,1);
+  --sidebar-width:72px;
+  --red:#ef4444;--green:#22c55e;--blue:#3b82f6;--amber:#f59e0b;--purple:#8b5cf6;--orange:#f97316;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--white);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--grey-700);border-radius:3px}
+
+/* ==================== LAYOUT ==================== */
+.app{display:flex;min-height:100vh}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-width);background:var(--bg-elevated);border-right:1px solid rgba(255,255,255,.05);display:flex;flex-direction:column;align-items:center;padding:20px 0;z-index:100;gap:8px}
+.sidebar__logo{width:40px;height:40px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:24px;position:relative;overflow:hidden}
+.sidebar__logo::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2) 0%,transparent 50%);border-radius:inherit}
+.sidebar__logo svg{width:20px;height:20px;position:relative;z-index:1}
+.sidebar__item{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--grey-500);transition:var(--transition);cursor:pointer;position:relative}
+.sidebar__item:hover{background:rgba(255,255,255,.06);color:var(--grey-200)}
+.sidebar__item.active{background:var(--accent-dim);color:var(--accent)}
+.sidebar__item.active::before{content:'';position:absolute;left:-16px;width:3px;height:20px;background:var(--accent);border-radius:0 2px 2px 0}
+.sidebar__item svg{width:20px;height:20px}
+.sidebar__spacer{flex:1}
+.sidebar__avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ec4899);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;cursor:pointer;transition:var(--transition);border:2px solid transparent}
+.sidebar__avatar:hover{border-color:var(--accent)}
+
+/* ==================== TOPBAR ==================== */
+.topbar{position:fixed;top:0;left:var(--sidebar-width);right:0;height:64px;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;padding:0 32px;z-index:90}
+.topbar__left{display:flex;align-items:center;gap:20px}
+.topbar__search{display:flex;align-items:center;gap:10px;padding:8px 18px;border-radius:var(--radius-pill);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);width:280px;transition:var(--transition)}
+.topbar__search:focus-within{border-color:rgba(20,184,166,.3);background:rgba(255,255,255,.06)}
+.topbar__search svg{width:16px;height:16px;color:var(--grey-500);flex-shrink:0}
+.topbar__search input{background:none;border:none;outline:none;color:var(--white);font-family:var(--font-body);font-size:.88rem;width:100%}
+.topbar__search input::placeholder{color:var(--grey-600)}
+.topbar__center{font-family:var(--font-display);font-size:1.1rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.topbar__center svg{width:18px;height:18px;color:var(--accent)}
+.topbar__right{display:flex;align-items:center;gap:16px}
+.topbar__icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--grey-400);transition:var(--transition);cursor:pointer;position:relative}
+.topbar__icon:hover{background:rgba(255,255,255,.06);color:var(--white)}
+.topbar__icon svg{width:18px;height:18px}
+.topbar__notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+
+/* ==================== MAIN ==================== */
+.main{margin-left:var(--sidebar-width);padding-top:64px;min-height:100vh;position:relative}
+.content{padding:32px;max-width:1400px}
+
+/* ==================== AMBIENT BG ==================== */
+.ambient-glow{position:fixed;top:-20%;right:-10%;width:60%;height:70%;background:radial-gradient(ellipse 60% 50% at 70% 30%,rgba(20,184,166,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+.ambient-glow-2{position:fixed;bottom:-30%;left:-15%;width:50%;height:60%;background:radial-gradient(ellipse 50% 50% at 30% 70%,rgba(20,184,166,.03) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* ==================== PAGE HEADER ==================== */
+.page-header{margin-bottom:32px}
+.page-header__row{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+.page-header__text h1{font-family:var(--font-display);font-size:1.8rem;font-weight:700;letter-spacing:-.03em;line-height:1.2;margin-bottom:6px}
+.page-header__text p{font-size:.92rem;color:var(--grey-400);line-height:1.5;max-width:520px}
+.page-header__actions{display:flex;gap:10px;flex-shrink:0}
+.pill-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.pill-btn--primary{background:var(--accent);color:#000}
+.pill-btn--primary:hover{background:#0fd9c4;box-shadow:0 0 24px rgba(20,184,166,.3)}
+.pill-btn--glass{background:rgba(255,255,255,.06);color:var(--white);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px)}
+.pill-btn--glass:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.pill-btn--red{background:var(--red);color:#fff}
+.pill-btn--red:hover{background:#f87171;box-shadow:0 0 20px rgba(239,68,68,.3)}
+.pill-btn--blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.pill-btn--blue:hover{background:rgba(59,130,246,.2)}
+.pill-btn--ghost{background:transparent;color:var(--grey-400);border:1px solid rgba(255,255,255,.08)}
+.pill-btn--ghost:hover{color:var(--white);border-color:rgba(255,255,255,.2)}
+.pill-btn .arrow{transition:transform .2s ease}
+.pill-btn:hover .arrow{transform:translateX(3px)}
+
+/* ==================== STATS ROW ==================== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.stat-card{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:24px;position:relative;overflow:hidden;transition:var(--transition)}
+.stat-card:hover{border-color:rgba(255,255,255,.1);transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s ease}
+.stat-card:hover::before{opacity:1}
+.stat-card__icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid rgba(255,255,255,.06)}
+.stat-card__icon svg{width:18px;height:18px}
+.stat-card__icon--teal{background:var(--accent-dim);color:var(--accent);border-color:rgba(20,184,166,.12)}
+.stat-card__icon--blue{background:rgba(59,130,246,.08);color:#3b82f6;border-color:rgba(59,130,246,.12)}
+.stat-card__icon--purple{background:rgba(139,92,246,.08);color:#8b5cf6;border-color:rgba(139,92,246,.12)}
+.stat-card__icon--orange{background:rgba(249,115,22,.08);color:#f97316;border-color:rgba(249,115,22,.12)}
+.stat-card__val{font-family:var(--font-display);font-size:1.6rem;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+.stat-card__label{font-size:.78rem;color:var(--grey-500)}
+.stat-card__trend{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:var(--radius-pill)}
+.stat-card__trend--up{background:rgba(34,197,94,.1);color:#22c55e}
+
+/* ==================== ALERT BANNER ==================== */
+.alert-banner{display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:var(--radius-md);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.06);margin-bottom:32px}
+.alert-banner__icon{width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--red)}
+.alert-banner__icon svg{width:16px;height:16px}
+.alert-banner__text{flex:1;min-width:0}
+.alert-banner__text strong{font-size:.88rem;color:var(--white);font-weight:600}
+.alert-banner__text span{font-size:.82rem;color:var(--grey-400);margin-left:6px}
+
+/* ==================== HERO POOL ==================== */
+.hero-pool{display:grid;grid-template-columns:1fr 340px;border:1px solid rgba(20,184,166,.2);border-radius:var(--radius-xl);background:linear-gradient(135deg,rgba(20,184,166,.06),transparent 60%),var(--bg-elevated);overflow:hidden;margin-bottom:40px;position:relative}
+.hero-pool::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#0fd9c4,var(--accent))}
+.hero-pool__body{padding:32px;display:flex;flex-direction:column;gap:20px}
+.hero-pool__badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:var(--radius-pill);font-size:.72rem;font-weight:600;background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2);width:fit-content}
+.hero-pool__badge-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse-dot 2s ease infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
+.hero-pool__title{font-family:var(--font-display);font-size:1.65rem;font-weight:700;letter-spacing:-.03em;line-height:1.2}
+.hero-pool__desc{font-size:.9rem;color:var(--grey-400);line-height:1.6;max-width:500px}
+.hero-pool__meta{display:flex;flex-wrap:wrap;gap:16px}
+.hero-pool__meta-item{display:flex;align-items:center;gap:5px;font-size:.82rem;color:var(--grey-500)}
+.hero-pool__meta-item svg{width:14px;height:14px}
+.hero-pool__progress{display:flex;flex-direction:column;gap:10px}
+.hero-pool__progress-nums{display:flex;justify-content:space-between;align-items:baseline}
+.hero-pool__progress-raised{font-family:var(--font-display);font-size:1.6rem;font-weight:800;letter-spacing:-.02em}
+.hero-pool__progress-goal{font-size:.82rem;color:var(--grey-500)}
+.hero-pool__progress-pct{font-family:var(--font-display);font-size:.92rem;font-weight:700;color:var(--accent)}
+.hero-pool__bar{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.hero-pool__bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#0fd9c4);transition:width 1s ease}
+.hero-pool__progress-sub{font-size:.78rem;color:var(--grey-500)}
+.hero-pool__actions{display:flex;gap:10px;flex-wrap:wrap}
+.hero-pool__side{border-left:1px solid rgba(255,255,255,.06);padding:32px 28px;display:flex;flex-direction:column;gap:20px;justify-content:center}
+.hero-pool__side-label{font-family:var(--font-display);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--grey-500)}
+.hero-pool__startup-row{display:flex;align-items:center;gap:12px}
+.hero-pool__startup-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0}
+.hero-pool__startup-info{flex:1;min-width:0}
+.hero-pool__startup-name{font-family:var(--font-display);font-size:.88rem;font-weight:600;margin-bottom:2px}
+.hero-pool__startup-votes{font-size:.72rem;color:var(--grey-500)}
+.hero-pool__startup-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:4px;overflow:hidden}
+.hero-pool__startup-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+.hero-pool__separator{height:1px;background:rgba(255,255,255,.06)}
+.hero-pool__countdown{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-md);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.hero-pool__countdown-unit{display:flex;flex-direction:column;gap:2px}
+.hero-pool__countdown-num{font-family:var(--font-display);font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+.hero-pool__countdown-label{font-size:.62rem;color:var(--grey-600);text-transform:uppercase;letter-spacing:.06em}
+
+/* ==================== TOOLBAR ==================== */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:28px}
+.toolbar__search{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 14px;border-radius:var(--radius-pill);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);min-width:220px;flex:1;max-width:320px;transition:var(--transition)}
+.toolbar__search:focus-within{border-color:rgba(20,184,166,.3);background:rgba(255,255,255,.06)}
+.toolbar__search svg{width:15px;height:15px;color:var(--grey-500);flex-shrink:0}
+.toolbar__search input{background:none;border:none;outline:none;color:var(--white);font-family:var(--font-body);font-size:.84rem;width:100%}
+.toolbar__search input::placeholder{color:var(--grey-600)}
+.toolbar__tabs{display:flex;gap:4px}
+.toolbar__tab{padding:7px 16px;border-radius:var(--radius-pill);font-size:.82rem;font-weight:500;color:var(--grey-500);border:1px solid transparent;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:6px;background:transparent}
+.toolbar__tab:hover{color:var(--grey-200);background:rgba(255,255,255,.04)}
+.toolbar__tab.active{color:var(--white);background:var(--bg-card);border-color:rgba(20,184,166,.2)}
+.toolbar__tab-count{font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:var(--radius-pill);background:rgba(255,255,255,.08)}
+.toolbar__tab.active .toolbar__tab-count{background:var(--accent-dim);color:var(--accent)}
+.toolbar__right{display:flex;gap:8px;margin-left:auto}
+.toolbar__select{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);color:var(--grey-200);font-family:var(--font-body);font-size:.82rem;padding:7px 12px;border-radius:var(--radius-sm);cursor:pointer;outline:none;-webkit-appearance:none}
+.toolbar__select option{background:var(--bg-card)}
+.toolbar__icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--bg-card);border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--grey-500);cursor:pointer;transition:var(--transition)}
+.toolbar__icon-btn:hover{border-color:rgba(255,255,255,.12);color:var(--grey-200)}
+.toolbar__icon-btn.active{background:var(--accent-dim);border-color:rgba(20,184,166,.2);color:var(--accent)}
+.toolbar__icon-btn svg{width:16px;height:16px}
+
+/* ==================== SECTION COMMON ==================== */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.section-title{font-family:var(--font-display);font-size:1.3rem;font-weight:700;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
+.section-title__count{font-size:.78rem;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);background:var(--accent-dim);color:var(--accent)}
+.section-subtitle{font-size:.85rem;color:var(--grey-500);margin-top:3px}
+.section-link{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;color:var(--grey-400);transition:var(--transition);cursor:pointer}
+.section-link:hover{color:var(--accent)}
+.section-link svg{width:16px;height:16px;transition:transform .2s ease}
+.section-link:hover svg{transform:translateX(3px)}
+
+/* ==================== POOL CARDS GRID ==================== */
+.pools-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px}
+.pool-card{background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:24px;position:relative;overflow:hidden;transition:var(--transition);cursor:pointer;display:flex;flex-direction:column;gap:16px}
+.pool-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.pool-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:0 2px 2px 0}
+.pool-card--active::before{background:linear-gradient(180deg,var(--accent),#0fd9c4)}
+.pool-card--urgent::before{background:linear-gradient(180deg,var(--red),#f97316)}
+.pool-card--urgent{border-color:rgba(239,68,68,.15)}
+.pool-card--urgent:hover{border-color:rgba(239,68,68,.3)}
+.pool-card__top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pool-card__badges{display:flex;flex-wrap:wrap;gap:5px}
+.pool-card__badge{padding:3px 10px;border-radius:var(--radius-pill);font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pool-card__badge--active{background:rgba(20,184,166,.12);color:var(--accent)}
+.pool-card__badge--urgent{background:rgba(239,68,68,.12);color:var(--red)}
+.pool-card__badge--category{background:rgba(255,255,255,.04);color:var(--grey-400)}
+.pool-card__days{font-size:.72rem;font-weight:600;color:var(--grey-500);white-space:nowrap}
+.pool-card__days--urgent{color:var(--red);font-weight:700}
+.pool-card__title{font-family:var(--font-display);font-size:1.05rem;font-weight:700;letter-spacing:-.02em;line-height:1.3}
+.pool-card__desc{font-size:.8rem;color:var(--grey-500);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pool-card__funding{display:flex;flex-direction:column;gap:8px}
+.pool-card__funding-nums{display:flex;justify-content:space-between;align-items:baseline}
+.pool-card__funding-raised{font-family:var(--font-display);font-size:1.15rem;font-weight:700}
+.pool-card__funding-pct{font-family:var(--font-display);font-size:.82rem;font-weight:700;color:var(--accent)}
+.pool-card__funding-pct--amber{color:var(--amber)}
+.pool-card__bar{height:4px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.pool-card__bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#0fd9c4)}
+.pool-card__bar-fill--urgent{background:linear-gradient(90deg,var(--red),var(--orange))}
+.pool-card__funding-goal{font-size:.72rem;color:var(--grey-600)}
+.pool-card__meta{display:flex;flex-wrap:wrap;gap:14px}
+.pool-card__meta-item{display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--grey-500)}
+.pool-card__meta-item svg{width:13px;height:13px}
+.pool-card__avatars{display:flex;align-items:center;gap:0}
+.pool-card__avatar{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;border:2px solid var(--bg-card);margin-left:-6px}
+.pool-card__avatar:first-child{margin-left:0}
+.pool-card__avatar--overflow{background:rgba(255,255,255,.08);color:var(--grey-400);font-size:.56rem}
+.pool-card__separator{height:1px;background:rgba(255,255,255,.06);margin:0 -24px}
+.pool-card__cta{display:flex;gap:8px;opacity:0;transition:opacity .25s ease}
+.pool-card:hover .pool-card__cta{opacity:1}
+.pool-card__cta .pill-btn{padding:8px 18px;font-size:.8rem}
+.pool-card__cta .pill-btn:first-child{flex:1}
+
+/* Urgent full-width card */
+.pool-card--full{grid-column:1 / -1}
+.pool-card--full .pool-card__inner{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+.pool-card--full .pool-card__cta{opacity:1}
+
+/* ==================== UPCOMING POOLS ==================== */
+.upcoming-section{margin-bottom:40px}
+.upcoming-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.upcoming-card{background:var(--bg-card);border:1px solid rgba(59,130,246,.15);border-radius:var(--radius-xl);padding:24px;position:relative;overflow:hidden;transition:var(--transition);cursor:pointer;display:flex;flex-direction:column;gap:16px}
+.upcoming-card:hover{border-color:rgba(59,130,246,.25);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.upcoming-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--blue),#60a5fa);border-radius:0 2px 2px 0}
+.upcoming-card__badge{padding:3px 10px;border-radius:var(--radius-pill);font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;background:rgba(59,130,246,.12);color:var(--blue);width:fit-content}
+.upcoming-card__title{font-family:var(--font-display);font-size:1.05rem;font-weight:700;letter-spacing:-.02em}
+.upcoming-card__desc{font-size:.8rem;color:var(--grey-500);line-height:1.5}
+.upcoming-card__opens{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);border-radius:var(--radius-sm);padding:14px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.upcoming-card__opens-label{font-size:.72rem;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.04em}
+.upcoming-card__opens-date{font-family:var(--font-display);font-size:1.05rem;font-weight:700}
+.upcoming-card__opens-days{font-size:.72rem;color:var(--grey-500)}
+.upcoming-card__meta{display:flex;gap:14px}
+.upcoming-card__meta-item{font-size:.75rem;color:var(--grey-500)}
+.upcoming-card__cta{display:flex;gap:8px}
+.upcoming-card__cta .pill-btn{padding:8px 18px;font-size:.8rem}
+
+/* ==================== CLOSED POOLS ==================== */
+.closed-section{margin-bottom:40px}
+.closed-list{display:flex;flex-direction:column;gap:10px}
+.closed-row{display:flex;align-items:center;gap:20px;background:var(--bg-elevated);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-md);padding:16px 20px;transition:var(--transition);cursor:pointer;opacity:.75}
+.closed-row:hover{opacity:1;background:var(--bg-card);border-color:rgba(255,255,255,.1)}
+.closed-row__left{flex:1;min-width:0}
+.closed-row__badges{display:flex;gap:5px;margin-bottom:6px}
+.closed-row__badge{padding:2px 8px;border-radius:var(--radius-pill);font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.closed-row__badge--funded{background:rgba(139,92,246,.12);color:var(--purple)}
+.closed-row__badge--closed{background:rgba(255,255,255,.06);color:var(--grey-500)}
+.closed-row__badge--category{background:rgba(255,255,255,.04);color:var(--grey-500)}
+.closed-row__name{font-family:var(--font-display);font-size:.92rem;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.closed-row__meta{font-size:.72rem;color:var(--grey-600)}
+.closed-row__middle{min-width:180px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.closed-row__funding-label{font-size:.72rem;color:var(--grey-600);text-align:right}
+.closed-row__bar{width:160px;height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+.closed-row__bar-fill{height:100%;border-radius:2px}
+.closed-row__bar-fill--full{background:linear-gradient(90deg,var(--purple),#a78bfa)}
+.closed-row__bar-fill--partial{background:linear-gradient(90deg,var(--grey-500),var(--grey-400))}
+.closed-row__right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:120px}
+.closed-row__pct{font-family:var(--font-display);font-size:.88rem;font-weight:700}
+.closed-row__pct--full{color:var(--purple)}
+.closed-row__pct--partial{color:var(--grey-400)}
+.closed-row__status{font-size:.7rem;color:var(--grey-600)}
+
+/* ==================== PAGINATION ==================== */
+.pagination{display:flex;justify-content:space-between;align-items:center;padding-top:8px;margin-bottom:40px}
+.pagination__info{font-size:.82rem;color:var(--grey-500)}
+.pagination__controls{display:flex;gap:6px}
+.pagination__btn{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--bg-card);border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--grey-500);cursor:pointer;font-size:.82rem;font-family:var(--font-body);font-weight:500;transition:var(--transition)}
+.pagination__btn:hover{border-color:rgba(255,255,255,.12);color:var(--grey-200)}
+.pagination__btn.active{background:var(--accent-dim);border-color:rgba(20,184,166,.2);color:var(--accent)}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:fadeUp .65s cubic-bezier(.4,0,.2,1) forwards}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}.d5{animation-delay:.25s}.d6{animation-delay:.3s}.d7{animation-delay:.35s}.d8{animation-delay:.4s}.d9{animation-delay:.45s}.d10{animation-delay:.5s}
+
+/* ==================== RESPONSIVE ==================== */
+@media(max-width:1200px){
+  .pools-grid{grid-template-columns:repeat(2,1fr)}
+  .pool-card--full{grid-column:1 / -1}
+  .pool-card--full .pool-card__inner{grid-template-columns:1fr}
+  .hero-pool{grid-template-columns:1fr}
+  .hero-pool__side{border-left:none;border-top:1px solid rgba(255,255,255,.06)}
+}
+@media(max-width:1024px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .upcoming-grid{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  :root{--sidebar-width:0px}
+  .sidebar{display:none}
+  .content{padding:20px}
+  .pools-grid{grid-template-columns:1fr}
+  .pool-card--full .pool-card__inner{grid-template-columns:1fr}
+  .pool-card__cta{opacity:1}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .page-header__row{flex-direction:column;align-items:flex-start}
+  .toolbar{flex-direction:column}
+  .toolbar__search{max-width:100%}
+  .toolbar__tabs{width:100%;overflow-x:auto}
+  .toolbar__right{margin-left:0;width:100%;justify-content:flex-end}
+  .topbar__search{width:160px}
+  .closed-row{flex-direction:column;align-items:flex-start;gap:12px}
+  .closed-row__middle{align-items:flex-start;min-width:auto;width:100%}
+  .closed-row__bar{width:100%}
+  .closed-row__right{align-items:flex-start}
+  .pagination{flex-direction:column;gap:12px;align-items:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="ambient-glow"></div>
+<div class="ambient-glow-2"></div>
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="sidebar">
+  <div class="sidebar__logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+  </div>
+  <div class="sidebar__item" title="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  </div>
+  <div class="sidebar__item active" title="Pools">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v10"/></svg>
+  </div>
+  <div class="sidebar__item" title="Pitches">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  </div>
+  <div class="sidebar__item" title="Vote">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+  </div>
+  <div class="sidebar__item" title="Analytics">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+  </div>
+  <div class="sidebar__item" title="Wallet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+  </div>
+  <div class="sidebar__spacer"></div>
+  <div class="sidebar__item" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <div class="sidebar__avatar">R</div>
+</aside>
+
+<!-- ============ TOPBAR ============ -->
+<header class="topbar">
+  <div class="topbar__left">
+    <div class="topbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search pools, startups...">
+    </div>
+  </div>
+  <div class="topbar__center">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    Crowd VC
+  </div>
+  <div class="topbar__right">
+    <div class="topbar__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="topbar__notif-dot"></span>
+    </div>
+    <div class="topbar__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    </div>
+    <div class="sidebar__avatar" style="width:32px;height:32px;font-size:.7rem">R</div>
+  </div>
+</header>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+<div class="content">
+   <!-- ======== 3. URGENT ALERT BANNER ======== -->
+  <div class="alert-banner anim d3">
+    <div class="alert-banner__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="alert-banner__text">
+      <strong>EdTech Innovation is closing in 3 days</strong>
+      <span>— 82% funded — $36,000 remaining. Cast your vote before March 5, 2026.</span>
+    </div>
+    <a href="#" class="pill-btn pill-btn--red" style="flex-shrink:0">Vote Now <span class="arrow">&rarr;</span></a>
+  </div>
+
+  <!-- ======== 1. PAGE HEADER ======== -->
+  <div class="page-header anim d1">
+    <div class="page-header__row">
+      <div class="page-header__text">
+        <h1>Investment Pools</h1>
+        <p>Browse curated pools of vetted startups, contribute capital, and vote to shape which companies receive funding.</p>
+      </div>
+      <div class="page-header__actions">
+        <a href="#" class="pill-btn pill-btn--glass">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Report
+        </a>
+        <a href="#" class="pill-btn pill-btn--primary">Browse Active <span class="arrow">&rarr;</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 4. FEATURED HERO POOL ======== -->
+  <div class="hero-pool anim d4">
+    <div class="hero-pool__body">
+      <div class="hero-pool__badge">
+        <span class="hero-pool__badge-dot"></span> Closing Soon
+      </div>
+      <h2 class="hero-pool__title">EdTech Innovation Fund</h2>
+      <p class="hero-pool__desc">Backing next-generation education platforms that use AI, gamification, and decentralized credentialing to reshape how people learn, upskill, and prove competency.</p>
+      <div class="hero-pool__meta">
+        <span class="hero-pool__meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10"/></svg>
+          EdTech
+        </span>
+        <span class="hero-pool__meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          6 startups
+        </span>
+        <span class="hero-pool__meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+          518 votes
+        </span>
+        <span class="hero-pool__meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Deadline: Mar 5, 2026
+        </span>
+      </div>
+      <div class="hero-pool__progress">
+        <div class="hero-pool__progress-nums">
+          <span class="hero-pool__progress-raised">$164,000</span>
+          <span class="hero-pool__progress-pct">82%</span>
+        </div>
+        <div class="hero-pool__bar"><div class="hero-pool__bar-fill" style="width:82%"></div></div>
+        <div class="hero-pool__progress-sub">$36,000 remaining &middot; Goal: $200,000 &middot; Min $500 &middot; Max $50,000</div>
+      </div>
+      <div class="hero-pool__actions">
+        <a href="#" class="pill-btn pill-btn--primary">Vote &amp; Contribute <span class="arrow">&rarr;</span></a>
+        <a href="#" class="pill-btn pill-btn--glass">View Full Details <span class="arrow">&nearr;</span></a>
+      </div>
+    </div>
+    <div class="hero-pool__side">
+      <div class="hero-pool__side-label">Top Startups by Votes</div>
+      <div class="hero-pool__startup-row">
+        <div class="hero-pool__startup-avatar" style="background:linear-gradient(135deg,#14b8a6,#06b6d4)">L</div>
+        <div class="hero-pool__startup-info">
+          <div class="hero-pool__startup-name">LearnSphere</div>
+          <div class="hero-pool__startup-votes">186 votes</div>
+          <div class="hero-pool__startup-bar"><div class="hero-pool__startup-bar-fill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="hero-pool__startup-row">
+        <div class="hero-pool__startup-avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">S</div>
+        <div class="hero-pool__startup-info">
+          <div class="hero-pool__startup-name">Synaptek</div>
+          <div class="hero-pool__startup-votes">143 votes</div>
+          <div class="hero-pool__startup-bar"><div class="hero-pool__startup-bar-fill" style="width:77%"></div></div>
+        </div>
+      </div>
+      <div class="hero-pool__startup-row">
+        <div class="hero-pool__startup-avatar" style="background:linear-gradient(135deg,#f97316,#ec4899)">e</div>
+        <div class="hero-pool__startup-info">
+          <div class="hero-pool__startup-name">eHub</div>
+          <div class="hero-pool__startup-votes">98 votes</div>
+          <div class="hero-pool__startup-bar"><div class="hero-pool__startup-bar-fill" style="width:53%"></div></div>
+        </div>
+      </div>
+      <div class="hero-pool__separator"></div>
+      <div class="hero-pool__countdown">
+        <div class="hero-pool__countdown-unit">
+          <div class="hero-pool__countdown-num">03</div>
+          <div class="hero-pool__countdown-label">Days</div>
+        </div>
+        <div class="hero-pool__countdown-unit">
+          <div class="hero-pool__countdown-num">08</div>
+          <div class="hero-pool__countdown-label">Hours</div>
+        </div>
+        <div class="hero-pool__countdown-unit">
+          <div class="hero-pool__countdown-num">24</div>
+          <div class="hero-pool__countdown-label">Min</div>
+        </div>
+        <div class="hero-pool__countdown-unit">
+          <div class="hero-pool__countdown-num">16</div>
+          <div class="hero-pool__countdown-label">Sec</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 2. STATS ROW ======== -->
+  <div class="stats-row anim d2">
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="stat-card__val">$1.23M</div>
+      <div class="stat-card__label">Total Deployed Capital</div>
+      <span class="stat-card__trend stat-card__trend--up">&#9650; 12.4%</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v10"/></svg>
+      </div>
+      <div class="stat-card__val">4 <span style="font-size:.78rem;font-weight:500;color:var(--grey-500)">of 8</span></div>
+      <div class="stat-card__label">Active Pools</div>
+      <span class="stat-card__trend stat-card__trend--up">+2 new</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+      </div>
+      <div class="stat-card__val">3,475</div>
+      <div class="stat-card__label">Total Votes Cast</div>
+      <span class="stat-card__trend stat-card__trend--up">&#9650; 218 this week</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-card__val">58</div>
+      <div class="stat-card__label">Startups Funded</div>
+      <span class="stat-card__trend stat-card__trend--up">+5</span>
+    </div>
+  </div>
+        <!-- ======== 5. TOOLBAR ======== -->
+  <div class="toolbar anim d5">
+    <div class="toolbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search pools by name or category...">
+    </div>
+    <div class="toolbar__tabs">
+      <div class="toolbar__tab">All Pools <span class="toolbar__tab-count">8</span></div>
+      <div class="toolbar__tab active">Active <span class="toolbar__tab-count">4</span></div>
+      <div class="toolbar__tab">Upcoming <span class="toolbar__tab-count">2</span></div>
+      <div class="toolbar__tab">Closed <span class="toolbar__tab-count">2</span></div>
+    </div>
+    <div class="toolbar__right">
+      <select class="toolbar__select">
+        <option>Closing Soon</option>
+        <option>Most Funded</option>
+        <option>Trending</option>
+        <option>Newest</option>
+      </select>
+      <div class="toolbar__icon-btn active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </div>
+      <div class="toolbar__icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+    </div>
+  </div>
+  <!-- ======== 6. ACTIVE POOLS GRID ======== -->
+  <section class="anim d6">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Active Pools <span class="section-title__count">4</span></h2>
+        <p class="section-subtitle">Pools currently accepting contributions and votes</p>
+      </div>
+    </div>
+    <div class="pools-grid">
+
+      <!-- Card 1: HealthTech Q1 -->
+      <div class="pool-card pool-card--active">
+        <div class="pool-card__top">
+          <div class="pool-card__badges">
+            <span class="pool-card__badge pool-card__badge--active">Active</span>
+            <span class="pool-card__badge pool-card__badge--category">HealthTech</span>
+          </div>
+          <span class="pool-card__days">14d left</span>
+        </div>
+        <div class="pool-card__title">HealthTech Q1 2026</div>
+        <div class="pool-card__desc">Backing breakthrough healthcare and biotech startups transforming patient outcomes through AI diagnostics and precision medicine.</div>
+        <div class="pool-card__funding">
+          <div class="pool-card__funding-nums">
+            <span class="pool-card__funding-raised">$136,000</span>
+            <span class="pool-card__funding-pct">68%</span>
+          </div>
+          <div class="pool-card__bar"><div class="pool-card__bar-fill" style="width:68%"></div></div>
+          <div class="pool-card__funding-goal">Goal: $200,000 &middot; Min $500</div>
+        </div>
+        <div class="pool-card__meta">
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            8 startups
+          </span>
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            342 votes
+          </span>
+        </div>
+        <div class="pool-card__avatars">
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">V</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">N</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#f97316,#ec4899)">A</div>
+          <div class="pool-card__avatar pool-card__avatar--overflow">+5</div>
+        </div>
+        <div class="pool-card__separator"></div>
+        <div class="pool-card__cta">
+          <a href="#" class="pill-btn pill-btn--primary">Vote &amp; Contribute</a>
+          <a href="#" class="pill-btn pill-btn--glass">Details</a>
+        </div>
+      </div>
+
+      <!-- Card 2: Green Energy Fund -->
+      <div class="pool-card pool-card--active">
+        <div class="pool-card__top">
+          <div class="pool-card__badges">
+            <span class="pool-card__badge pool-card__badge--active">Active</span>
+            <span class="pool-card__badge pool-card__badge--category">GreenTech</span>
+          </div>
+          <span class="pool-card__days">21d left</span>
+        </div>
+        <div class="pool-card__title">Green Energy Fund</div>
+        <div class="pool-card__desc">Clean energy and sustainability ventures accelerating the global transition to renewables and carbon-negative technologies.</div>
+        <div class="pool-card__funding">
+          <div class="pool-card__funding-nums">
+            <span class="pool-card__funding-raised">$90,000</span>
+            <span class="pool-card__funding-pct" style="color:var(--amber)">45%</span>
+          </div>
+          <div class="pool-card__bar"><div class="pool-card__bar-fill" style="width:45%"></div></div>
+          <div class="pool-card__funding-goal">Goal: $200,000 &middot; Min $500</div>
+        </div>
+        <div class="pool-card__meta">
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            12 startups
+          </span>
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            189 votes
+          </span>
+        </div>
+        <div class="pool-card__avatars">
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#14b8a6,#06b6d4)">E</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#f97316,#ec4899)">P</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">V</div>
+          <div class="pool-card__avatar pool-card__avatar--overflow">+9</div>
+        </div>
+        <div class="pool-card__separator"></div>
+        <div class="pool-card__cta">
+          <a href="#" class="pill-btn pill-btn--primary">Vote &amp; Contribute</a>
+          <a href="#" class="pill-btn pill-btn--glass">Details</a>
+        </div>
+      </div>
+
+      <!-- Card 3: AI Startups Fund -->
+      <div class="pool-card pool-card--active">
+        <div class="pool-card__top">
+          <div class="pool-card__badges">
+            <span class="pool-card__badge pool-card__badge--active">Active</span>
+            <span class="pool-card__badge pool-card__badge--category">AI / ML</span>
+          </div>
+          <span class="pool-card__days">18d left</span>
+        </div>
+        <div class="pool-card__title">AI Startups Fund</div>
+        <div class="pool-card__desc">The most promising artificial intelligence and machine learning ventures building foundational models and enterprise applications.</div>
+        <div class="pool-card__funding">
+          <div class="pool-card__funding-nums">
+            <span class="pool-card__funding-raised">$275,000</span>
+            <span class="pool-card__funding-pct" style="color:var(--amber)">55%</span>
+          </div>
+          <div class="pool-card__bar"><div class="pool-card__bar-fill" style="width:55%"></div></div>
+          <div class="pool-card__funding-goal">Goal: $500,000 &middot; Min $1,000</div>
+        </div>
+        <div class="pool-card__meta">
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            15 startups
+          </span>
+          <span class="pool-card__meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            723 votes
+          </span>
+        </div>
+        <div class="pool-card__avatars">
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">S</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#14b8a6,#06b6d4)">M</div>
+          <div class="pool-card__avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">N</div>
+          <div class="pool-card__avatar pool-card__avatar--overflow">+12</div>
+        </div>
+        <div class="pool-card__separator"></div>
+        <div class="pool-card__cta">
+          <a href="#" class="pill-btn pill-btn--primary">Vote &amp; Contribute</a>
+          <a href="#" class="pill-btn pill-btn--glass">Details</a>
+        </div>
+      </div>
+
+      <!-- Card 4: EdTech Innovation — URGENT full-width -->
+      <div class="pool-card pool-card--urgent pool-card--full">
+        <div class="pool-card__inner">
+          <div>
+            <div class="pool-card__top" style="margin-bottom:12px">
+              <div class="pool-card__badges">
+                <span class="pool-card__badge pool-card__badge--urgent">&#9679; Urgent</span>
+                <span class="pool-card__badge pool-card__badge--category">EdTech</span>
+              </div>
+              <span class="pool-card__days pool-card__days--urgent">3d left</span>
+            </div>
+            <div class="pool-card__title" style="font-size:1.2rem;margin-bottom:8px">EdTech Innovation</div>
+            <div class="pool-card__desc" style="margin-bottom:12px">Revolutionizing education through AI-powered platforms, decentralized credentialing, and gamified skill development.</div>
+            <div class="pool-card__meta" style="margin-bottom:8px">
+              <span class="pool-card__meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                6 startups
+              </span>
+              <span class="pool-card__meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                518 votes
+              </span>
+            </div>
+            <div class="pool-card__avatars">
+              <div class="pool-card__avatar" style="background:linear-gradient(135deg,#14b8a6,#06b6d4)">L</div>
+              <div class="pool-card__avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">S</div>
+              <div class="pool-card__avatar" style="background:linear-gradient(135deg,#f97316,#ec4899)">e</div>
+              <div class="pool-card__avatar pool-card__avatar--overflow">+3</div>
+            </div>
+          </div>
+          <div>
+            <div class="pool-card__funding" style="margin-bottom:16px">
+              <div class="pool-card__funding-nums">
+                <span class="pool-card__funding-raised" style="font-size:1.4rem">$164,000</span>
+                <span class="pool-card__funding-pct" style="color:var(--accent)">82%</span>
+              </div>
+              <div class="pool-card__bar" style="height:6px"><div class="pool-card__bar-fill--urgent" style="width:82%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange))"></div></div>
+              <div class="pool-card__funding-goal">$36,000 remaining &middot; Goal: $200,000 &middot; Min $500 &middot; Max $50,000</div>
+            </div>
+            <div class="pool-card__cta" style="opacity:1">
+              <a href="#" class="pill-btn pill-btn--red" style="flex:1;text-align:center;justify-content:center">Vote &amp; Contribute <span class="arrow">&rarr;</span></a>
+              <a href="#" class="pill-btn pill-btn--glass">Details</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======== 7. UPCOMING POOLS ======== -->
+  <section class="upcoming-section anim d8">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Upcoming Pools <span class="section-title__count" style="background:rgba(59,130,246,.1);color:var(--blue)">2</span></h2>
+        <p class="section-subtitle">New pools opening soon — get notified to invest early</p>
+      </div>
+    </div>
+    <div class="upcoming-grid">
+
+      <!-- DeFi Protocols Q2 -->
+      <div class="upcoming-card">
+        <div class="upcoming-card__badge">Upcoming</div>
+        <div class="upcoming-card__title">DeFi Protocols Q2</div>
+        <div class="upcoming-card__desc">Next-generation decentralized finance protocols building open, permissionless financial infrastructure for the future economy.</div>
+        <div class="upcoming-card__opens">
+          <div class="upcoming-card__opens-label">Opens In</div>
+          <div class="upcoming-card__opens-date">March 24, 2026</div>
+          <div class="upcoming-card__opens-days">30 days from now</div>
+        </div>
+        <div class="upcoming-card__meta">
+          <span class="upcoming-card__meta-item">FinTech</span>
+          <span class="upcoming-card__meta-item">&middot;</span>
+          <span class="upcoming-card__meta-item">Est. Target: $300,000</span>
+        </div>
+        <div class="upcoming-card__cta">
+          <a href="#" class="pill-btn pill-btn--blue" style="flex:1;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notify Me When Open
+          </a>
+          <a href="#" class="pill-btn pill-btn--ghost">Preview <span class="arrow">&nearr;</span></a>
+        </div>
+      </div>
+
+      <!-- Web3 Gaming Fund -->
+      <div class="upcoming-card">
+        <div class="upcoming-card__badge">Upcoming</div>
+        <div class="upcoming-card__title">Web3 Gaming Fund</div>
+        <div class="upcoming-card__desc">Immersive play-to-earn gaming ecosystems, metaverse infrastructure, and player-owned economy platforms redefining entertainment.</div>
+        <div class="upcoming-card__opens">
+          <div class="upcoming-card__opens-label">Opens In</div>
+          <div class="upcoming-card__opens-date">April 8, 2026</div>
+          <div class="upcoming-card__opens-days">45 days from now</div>
+        </div>
+        <div class="upcoming-card__meta">
+          <span class="upcoming-card__meta-item">Entertainment</span>
+          <span class="upcoming-card__meta-item">&middot;</span>
+          <span class="upcoming-card__meta-item">Est. Target: $250,000</span>
+        </div>
+        <div class="upcoming-card__cta">
+          <a href="#" class="pill-btn pill-btn--blue" style="flex:1;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notify Me When Open
+          </a>
+          <a href="#" class="pill-btn pill-btn--ghost">Preview <span class="arrow">&nearr;</span></a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======== 8. COMPLETED POOLS ======== -->
+  <section class="closed-section anim d9">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Completed Pools</h2>
+        <p class="section-subtitle">Past pools and their funding outcomes</p>
+      </div>
+      <a href="#" class="section-link">View All History <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="closed-list">
+
+      <!-- BioTech Breakthrough -->
+      <div class="closed-row">
+        <div class="closed-row__left">
+          <div class="closed-row__badges">
+            <span class="closed-row__badge closed-row__badge--funded">Fully Funded</span>
+            <span class="closed-row__badge closed-row__badge--category">HealthTech</span>
+          </div>
+          <div class="closed-row__name">BioTech Breakthrough</div>
+          <div class="closed-row__meta">10 startups &middot; 1,247 votes &middot; Closed Feb 2026</div>
+        </div>
+        <div class="closed-row__middle">
+          <div class="closed-row__funding-label">$300,000 / $300,000</div>
+          <div class="closed-row__bar"><div class="closed-row__bar-fill closed-row__bar-fill--full" style="width:100%"></div></div>
+        </div>
+        <div class="closed-row__right">
+          <div class="closed-row__pct closed-row__pct--full">100%</div>
+          <div class="closed-row__status">Goal reached</div>
+          <a href="#" class="pill-btn pill-btn--ghost" style="padding:6px 14px;font-size:.75rem">View Results <span class="arrow">&rarr;</span></a>
+        </div>
+      </div>
+
+      <!-- Clean Water Initiative -->
+      <div class="closed-row">
+        <div class="closed-row__left">
+          <div class="closed-row__badges">
+            <span class="closed-row__badge closed-row__badge--closed">Closed</span>
+            <span class="closed-row__badge closed-row__badge--category">GreenTech</span>
+          </div>
+          <div class="closed-row__name">Clean Water Initiative</div>
+          <div class="closed-row__meta">7 startups &middot; 456 votes &middot; Closed Jan 2026</div>
+        </div>
+        <div class="closed-row__middle">
+          <div class="closed-row__funding-label">$178,000 / $200,000</div>
+          <div class="closed-row__bar"><div class="closed-row__bar-fill closed-row__bar-fill--partial" style="width:89%"></div></div>
+        </div>
+        <div class="closed-row__right">
+          <div class="closed-row__pct closed-row__pct--partial">89%</div>
+          <div class="closed-row__status">$22,000 short of goal</div>
+          <a href="#" class="pill-btn pill-btn--ghost" style="padding:6px 14px;font-size:.75rem">View Results <span class="arrow">&rarr;</span></a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======== 9. PAGINATION ======== -->
+  <div class="pagination anim d10">
+    <div class="pagination__info">Showing 8 of 8 pools</div>
+    <div class="pagination__controls">
+      <div class="pagination__btn" style="color:var(--grey-600)">&lsaquo;</div>
+      <div class="pagination__btn active">1</div>
+      <div class="pagination__btn">&rsaquo;</div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+</div>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.style.animationPlayState = 'running'; });
+}, { threshold: 0.08 });
+document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>

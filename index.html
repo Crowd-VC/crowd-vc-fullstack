@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrowdVC — Decentralized Venture Crowdfunding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A0A0A;--bg-elevated:#111111;--bg-card:#161616;
+  --accent:#14B8A6;--accent-glow:rgba(20,184,166,.15);--accent-dim:rgba(20,184,166,.08);
+  --white:#FFFFFF;--grey-100:#F5F5F5;--grey-200:#E5E5E5;--grey-400:#999;--grey-500:#666;--grey-600:#444;--grey-700:#2A2A2A;--grey-800:#1A1A1A;
+  --radius-sm:8px;--radius-md:16px;--radius-lg:24px;--radius-xl:32px;--radius-pill:999px;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --transition:all .3s cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--font-body);background:var(--bg);color:var(--white);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ==================== UTILITY ==================== */
+.container{max-width:1280px;margin:0 auto;padding:0 40px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:var(--radius-pill);font-size:.8rem;font-weight:500;letter-spacing:.02em;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08)}
+.badge--dark{background:rgba(255,255,255,.06);color:var(--grey-400)}
+.badge--accent{background:var(--accent-dim);color:var(--accent);border-color:rgba(20,184,166,.15)}
+.badge--white{background:rgba(0,0,0,.05);color:#333;border-color:rgba(0,0,0,.08)}
+.badge__dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse-dot 2s ease infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+
+.pill-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.9rem;font-weight:600;border:none;cursor:pointer;transition:var(--transition);letter-spacing:-.01em;white-space:nowrap}
+.pill-btn--primary{background:var(--accent);color:#000}
+.pill-btn--primary:hover{background:#0fd9c4;box-shadow:0 0 30px rgba(20,184,166,.3)}
+.pill-btn--white{background:var(--white);color:#000}
+.pill-btn--white:hover{background:#f0f0f0;box-shadow:0 8px 32px rgba(255,255,255,.1)}
+.pill-btn--glass{background:rgba(255,255,255,.06);color:var(--white);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+.pill-btn--glass:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+.pill-btn--dark{background:#111;color:var(--white);border:1px solid var(--grey-700)}
+.pill-btn--dark:hover{background:#1a1a1a;border-color:var(--grey-600)}
+.pill-btn .arrow{transition:transform .3s ease}
+.pill-btn:hover .arrow{transform:translateX(3px)}
+
+.section-label{font-family:var(--font-display);font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--grey-500);font-weight:600}
+
+/* ==================== NAVBAR ==================== */
+.navbar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:16px 0;transition:var(--transition)}
+.navbar.scrolled{background:rgba(10,10,10,.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05)}
+.navbar__inner{display:flex;align-items:center;justify-content:space-between}
+.navbar__logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1.3rem;letter-spacing:-.03em}
+.navbar__logo-icon{width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.navbar__logo-icon svg{width:18px;height:18px}
+.navbar__links{display:flex;gap:8px}
+.navbar__links a{padding:8px 18px;border-radius:var(--radius-pill);font-size:.88rem;font-weight:500;color:var(--grey-400);transition:var(--transition)}
+.navbar__links a:hover,.navbar__links a.active{color:var(--white);background:rgba(255,255,255,.06)}
+.navbar__actions{display:flex;gap:10px;align-items:center}
+
+/* ==================== HERO ==================== */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding-top:80px;overflow:hidden;background:var(--bg)}
+.hero__bg{position:absolute;inset:0;z-index:0}
+/* Teal gradient blob — right side like reference */
+.hero__teal-blob{position:absolute;top:0;right:-10%;width:70%;height:100%;background:radial-gradient(ellipse 70% 80% at 80% 50%,rgba(20,184,166,.10) 0%,rgba(20,184,166,.05) 30%,transparent 65%);pointer-events:none;z-index:0}
+/* Large circle element */
+.hero__circle{position:absolute;width:700px;height:700px;border-radius:50%;border:1px solid rgba(255,255,255,.06);left:50%;top:55%;transform:translate(-50%,-50%);z-index:1;pointer-events:none}
+.hero__circle::after{content:'';position:absolute;inset:-1px;border-radius:50%;border:1px solid rgba(255,255,255,.03)}
+/* Animated radial beams */
+.hero__beams{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:0;height:0;z-index:1;pointer-events:none}
+.hero__beam{position:absolute;top:0;left:0;width:1px;height:480px;transform-origin:top center;opacity:0;animation:beamPulse 4s ease-in-out infinite}
+.hero__beam::after{content:'';position:absolute;top:0;left:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 40%,transparent 100%)}
+@keyframes beamPulse{0%{opacity:0}15%{opacity:1}50%{opacity:.4}85%{opacity:1}100%{opacity:0}}
+/* Horizontal framing lines */
+.hero__frame-top,.hero__frame-bottom{position:absolute;left:5%;right:5%;height:1px;background:rgba(255,255,255,.06);z-index:2;pointer-events:none}
+.hero__frame-top{top:42%}
+.hero__frame-bottom{bottom:2%}
+/* Canvas for dash matrix */
+.hero__canvas-wrap{position:absolute;left:0;right:0;top:42%;bottom:0;z-index:1;overflow:hidden}
+.hero__canvas-wrap canvas{width:100%;height:100%;display:block}
+/* Content */
+.hero__content{position:relative;z-index:10;text-align:center;max-width:820px;margin:0 auto;padding-bottom:20px}
+.hero__badge{margin-bottom:28px}
+.hero__badge-inner{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;border-radius:var(--radius-pill);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);font-size:.82rem;font-weight:500;color:var(--grey-200);letter-spacing:.01em}
+.hero__badge-icon{width:18px;height:18px;border-radius:5px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.hero__badge-icon svg{width:10px;height:10px}
+.hero__title{font-family:var(--font-display);font-size:clamp(2.8rem,5.8vw,4.8rem);font-weight:800;line-height:1.08;letter-spacing:-.04em;margin-bottom:24px;color:var(--white)}
+.hero__sub{font-size:1rem;color:var(--grey-400);line-height:1.7;max-width:480px;margin:0 auto 40px;font-weight:400}
+.hero__actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+/* Outline buttons matching reference */
+.pill-btn--outline{background:transparent;color:var(--white);border:1.5px solid rgba(255,255,255,.25);backdrop-filter:blur(6px)}
+.pill-btn--outline:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.4)}
+/* Chat bubble floating btn */
+.hero__chat-bubble{position:absolute;bottom:32px;right:40px;width:52px;height:52px;border-radius:50%;background:var(--white);display:flex;align-items:center;justify-content:center;z-index:20;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:var(--transition)}
+.hero__chat-bubble:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(0,0,0,.4)}
+.hero__chat-bubble svg{width:22px;height:22px;color:#000}
+
+/* ==================== HOW IT WORKS ==================== */
+.how-it-works{padding:140px 0;position:relative}
+.how-it-works__header{text-align:center;margin-bottom:80px}
+.how-it-works__title{font-family:var(--font-display);font-size:clamp(2rem,4vw,3.2rem);font-weight:700;letter-spacing:-.03em;margin-top:16px}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:var(--radius-xl);overflow:hidden}
+.phase{background:var(--bg-elevated);padding:48px 36px;position:relative;transition:var(--transition)}
+.phase:hover{background:var(--bg-card)}
+.phase__number{font-family:var(--font-display);font-size:5rem;font-weight:800;color:rgba(255,255,255,.03);line-height:1;position:absolute;top:20px;right:24px;letter-spacing:-.05em}
+.phase__icon{width:52px;height:52px;border-radius:var(--radius-md);background:var(--accent-dim);display:flex;align-items:center;justify-content:center;margin-bottom:24px;border:1px solid rgba(20,184,166,.12)}
+.phase__icon svg{width:24px;height:24px;color:var(--accent)}
+.phase__name{font-family:var(--font-display);font-size:1.3rem;font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
+.phase__desc{color:var(--grey-400);line-height:1.7;font-size:.92rem}
+.phase__tag{display:inline-flex;align-items:center;gap:4px;margin-top:20px;padding:4px 12px;border-radius:var(--radius-pill);font-size:.75rem;font-weight:500;background:rgba(255,255,255,.04);color:var(--grey-400);border:1px solid rgba(255,255,255,.06)}
+
+/* ==================== BENEFITS GRID ==================== */
+.benefits{padding:140px 0;position:relative}
+.benefits__header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:56px}
+.benefits__header-left{max-width:500px}
+.benefits__title{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:-.03em;margin-top:16px}
+.benefits__grid{display:grid;grid-template-columns:repeat(3,1fr);position:relative;border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);overflow:hidden;background:var(--bg-elevated)}
+.benefits__col{padding:48px 40px;position:relative;min-height:420px;display:flex;flex-direction:column}
+.benefits__col:not(:last-child)::after{content:'';position:absolute;right:0;top:40px;bottom:40px;width:1px;background:rgba(255,255,255,.06)}
+.benefits__col-title{font-family:var(--font-display);font-size:1.1rem;font-weight:600;margin-bottom:10px;letter-spacing:-.01em}
+.benefits__col-desc{font-size:.88rem;color:var(--grey-500);line-height:1.6;margin-bottom:24px}
+
+/* Column 1 - Mountain Viz */
+.mountain-viz{flex:1;position:relative;display:flex;align-items:flex-end;overflow:hidden}
+.mountain-bars{display:flex;align-items:flex-end;gap:3px;width:100%;height:200px}
+.mountain-bar{width:3px;background:rgba(255,255,255,.7);border-radius:1px;transition:height .6s cubic-bezier(.4,0,.2,1)}
+.mountain-label{position:absolute;padding:4px 12px;border-radius:var(--radius-pill);font-size:.7rem;font-weight:500;background:rgba(20,184,166,.15);color:var(--accent);border:1px solid rgba(20,184,166,.2);white-space:nowrap;backdrop-filter:blur(6px)}
+.mountain-label::before{content:'';position:absolute;width:1px;background:rgba(20,184,166,.3)}
+.mountain-label--a{top:20px;left:25%}.mountain-label--a::before{height:30px;bottom:-30px;left:50%}
+.mountain-label--b{top:40px;right:15%}.mountain-label--b::before{height:20px;bottom:-20px;left:50%}
+
+/* Column 2 - Fingerprint/Identity */
+.identity-viz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+.identity-icon{width:100px;height:100px;border-radius:var(--radius-lg);background:rgba(255,255,255,.03);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.identity-icon::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05) 0%,transparent 50%);border-radius:inherit}
+.identity-icon svg{width:44px;height:44px;color:rgba(255,255,255,.6)}
+.progress-bar{width:80%;height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
+.progress-bar__fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#0fd9c4);width:0%;animation:progressFill 2.5s ease forwards 1s}
+@keyframes progressFill{to{width:68%}}
+.progress-label{font-size:.72rem;color:var(--grey-500)}
+
+/* Column 3 - Dot Chart */
+.dot-chart{flex:1;position:relative;display:flex;gap:16px;align-items:flex-end}
+.dot-chart__axis{display:flex;flex-direction:column;justify-content:space-between;height:180px}
+.dot-chart__axis-val{font-size:.65rem;color:var(--grey-600);font-variant-numeric:tabular-nums}
+.dot-chart__bars{display:flex;align-items:flex-end;gap:6px;flex:1;height:180px}
+.dot-bar{display:flex;flex-direction:column-reverse;gap:2px;flex:1}
+.dot-bar__cell{width:100%;aspect-ratio:1;border-radius:2px;background:rgba(255,255,255,.04);transition:background .4s ease}
+.dot-bar__cell.filled{background:rgba(255,255,255,.65)}
+.dot-bar__cell.accent{background:var(--accent)}
+
+/* ==================== MILESTONE SECTION ==================== */
+.milestone{padding:140px 0;position:relative}
+.milestone__inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.milestone__content{max-width:480px}
+.milestone__title{font-family:var(--font-display);font-size:clamp(2rem,3.5vw,2.8rem);font-weight:700;letter-spacing:-.03em;margin:16px 0 20px;line-height:1.15}
+.milestone__desc{color:var(--grey-400);line-height:1.7;font-size:.95rem;margin-bottom:32px}
+.milestone__features{display:flex;flex-direction:column;gap:16px;margin-bottom:40px}
+.milestone__feature{display:flex;gap:14px;align-items:flex-start}
+.milestone__feature-icon{width:36px;height:36px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(20,184,166,.1)}
+.milestone__feature-icon svg{width:16px;height:16px;color:var(--accent)}
+.milestone__feature-text{font-size:.9rem;color:var(--grey-400);line-height:1.6}
+.milestone__feature-text strong{color:var(--white);font-weight:600}
+
+.milestone__visual{position:relative}
+.milestone-card{background:var(--bg-elevated);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-xl);padding:36px;position:relative;overflow:hidden}
+.milestone-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(20,184,166,.3),transparent)}
+.milestone-card__header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.milestone-card__title{font-family:var(--font-display);font-size:1rem;font-weight:600}
+.milestone-card__badge{padding:4px 10px;border-radius:var(--radius-pill);font-size:.7rem;background:rgba(20,184,166,.1);color:var(--accent);border:1px solid rgba(20,184,166,.15)}
+.milestone-steps{display:flex;flex-direction:column;gap:16px}
+.milestone-step{display:flex;gap:16px;align-items:center;padding:16px;border-radius:var(--radius-md);background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);transition:var(--transition)}
+.milestone-step:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+.milestone-step__check{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.milestone-step__check.done{background:var(--accent);color:#000}
+.milestone-step__check.pending{background:rgba(255,255,255,.05);border:1.5px solid var(--grey-600)}
+.milestone-step__check svg{width:14px;height:14px}
+.milestone-step__info{flex:1}
+.milestone-step__name{font-size:.88rem;font-weight:500;margin-bottom:2px}
+.milestone-step__meta{font-size:.75rem;color:var(--grey-500)}
+.milestone-step__amount{font-family:var(--font-display);font-size:.9rem;font-weight:600;color:var(--accent)}
+.milestone-card__footer{margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center}
+.milestone-card__total-label{font-size:.78rem;color:var(--grey-500)}
+.milestone-card__total-val{font-family:var(--font-display);font-size:1.4rem;font-weight:700}
+.milestone-card__progress{width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,.05);margin-top:16px;overflow:hidden}
+.milestone-card__progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),#0fd9c4);width:40%}
+
+/* ==================== FAQ SECTION ==================== */
+.faq{padding:140px 0;background:var(--white);color:#000;position:relative;overflow:hidden}
+.faq__inner{display:grid;grid-template-columns:360px 1fr;gap:80px;align-items:flex-start}
+.faq__left{}
+.faq__contact-card{background:var(--grey-100);border-radius:var(--radius-xl);padding:36px;border:1px solid var(--grey-200)}
+.faq__contact-badge{margin-bottom:20px}
+.faq__contact-title{font-family:var(--font-display);font-size:1.6rem;font-weight:700;letter-spacing:-.02em;margin-bottom:10px;color:#000}
+.faq__contact-desc{font-size:.9rem;color:#666;line-height:1.6;margin-bottom:24px}
+.faq__contact-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:var(--radius-pill);background:#000;color:#fff;font-size:.88rem;font-weight:600;border:none;cursor:pointer;transition:var(--transition)}
+.faq__contact-btn:hover{background:#222}
+.faq__contact-btn svg{width:14px;height:14px}
+
+.faq__right{}
+.faq__title{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.03em;margin-bottom:40px;color:#000}
+.faq-item{border-bottom:1px solid var(--grey-200);overflow:hidden}
+.faq-item__header{display:flex;justify-content:space-between;align-items:center;padding:22px 0;cursor:pointer;transition:var(--transition)}
+.faq-item__header:hover{color:var(--accent)}
+.faq-item__question{font-size:1rem;font-weight:500}
+.faq-item__toggle{width:32px;height:32px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0}
+.faq-item__toggle svg{width:18px;height:18px;transition:transform .3s ease}
+.faq-item.open .faq-item__toggle svg{transform:rotate(45deg)}
+.faq-item__answer{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1)}
+.faq-item.open .faq-item__answer{max-height:300px}
+.faq-item__answer-inner{padding-bottom:22px;color:#666;line-height:1.7;font-size:.92rem}
+
+/* ==================== CTA BANNER ==================== */
+.cta-banner{position:relative;padding:140px 0 160px;overflow:hidden;background:radial-gradient(ellipse 80% 60% at 50% 100%,rgba(20,184,166,.12) 0%,var(--bg) 60%)}
+.cta-banner__bg-texture{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cta-banner__stepped{position:absolute;bottom:0;left:0;right:0;height:120px}
+.cta-banner__inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.cta-banner__content{max-width:520px}
+.cta-banner__title{font-family:var(--font-display);font-size:clamp(2.4rem,4.5vw,3.6rem);font-weight:800;letter-spacing:-.04em;line-height:1.08;margin:16px 0 20px;background:linear-gradient(180deg,#fff 50%,rgba(255,255,255,.5) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.cta-banner__desc{font-size:1.05rem;color:var(--grey-400);line-height:1.7;margin-bottom:36px}
+.cta-banner__actions{display:flex;gap:14px;flex-wrap:wrap}
+
+.cta-banner__visual{display:flex;justify-content:center;align-items:center;position:relative;min-height:360px}
+.glass-chart{position:relative;display:flex;align-items:flex-end;gap:14px;padding:40px;perspective:800px}
+.glass-candle{display:flex;flex-direction:column;align-items:center;gap:4px;transform:rotateY(-8deg) rotateX(2deg);transition:transform .6s ease}
+.glass-candle:hover{transform:rotateY(0deg) rotateX(0deg) translateY(-8px)}
+.glass-candle__wick{width:2px;height:24px;background:rgba(255,255,255,.2);border-radius:1px}
+.glass-candle__body{width:48px;border-radius:8px;position:relative;overflow:hidden;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1)}
+.glass-candle__body::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,.02) 50%,rgba(255,255,255,.06) 100%);border-radius:inherit}
+.glass-candle__body::after{content:'';position:absolute;top:4px;left:4px;right:4px;height:30%;background:linear-gradient(180deg,rgba(255,255,255,.1),transparent);border-radius:4px}
+.glass-candle--green .glass-candle__body{background:rgba(20,184,166,.2);border-color:rgba(20,184,166,.2)}
+.glass-candle--red .glass-candle__body{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.15)}
+.glass-candle--neutral .glass-candle__body{background:rgba(255,255,255,.06)}
+.glass-candle__shadow{width:40px;height:6px;border-radius:50%;background:rgba(20,184,166,.08);margin-top:8px;filter:blur(4px)}
+.glass-glow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(20,184,166,.1) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+
+/* ==================== FOOTER ==================== */
+.footer{padding:48px 0;border-top:1px solid rgba(255,255,255,.05)}
+.footer__inner{display:flex;justify-content:space-between;align-items:center}
+.footer__copy{font-size:.82rem;color:var(--grey-500)}
+.footer__links{display:flex;gap:24px}
+.footer__links a{font-size:.82rem;color:var(--grey-500);transition:var(--transition)}
+.footer__links a:hover{color:var(--white)}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.animate-up{opacity:0;animation:fadeUp .8s cubic-bezier(.4,0,.2,1) forwards}
+.animate-in{opacity:0;animation:fadeIn .6s ease forwards}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}.delay-3{animation-delay:.3s}.delay-4{animation-delay:.4s}.delay-5{animation-delay:.5s}.delay-6{animation-delay:.6s}
+
+/* Scroll reveal */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s cubic-bezier(.4,0,.2,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ==================== RESPONSIVE ==================== */
+@media(max-width:1024px){
+  .phases,.benefits__grid{grid-template-columns:1fr}
+  .benefits__col:not(:last-child)::after{display:none}
+  .benefits__col:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
+  .milestone__inner,.cta-banner__inner,.faq__inner{grid-template-columns:1fr}
+  .faq__inner{gap:40px}
+  .hero__stats{flex-wrap:wrap;gap:32px}
+}
+@media(max-width:768px){
+  .container{padding:0 20px}
+  .navbar__links{display:none}
+  .hero__actions{flex-direction:column;align-items:center}
+  .benefits__header{flex-direction:column;gap:20px;align-items:flex-start}
+  .cta-banner__visual{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAVBAR ============ -->
+<nav class="navbar" id="navbar">
+<div class="container navbar__inner">
+  <a href="#" class="navbar__logo">
+    <div class="navbar__logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    </div>
+    CrowdVC
+  </a>
+  <div class="navbar__links">
+    <a href="#how" class="active">How It Works</a>
+    <a href="#benefits">Benefits</a>
+    <a href="#safety">Safety</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="navbar__actions">
+    <a href="#" class="pill-btn pill-btn--glass" style="padding:10px 22px;font-size:.85rem">Launch App</a>
+    <a href="#" class="pill-btn pill-btn--primary" style="padding:10px 22px;font-size:.85rem">Start Investing</a>
+  </div>
+</div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+<div class="hero__bg">
+  <div class="hero__teal-blob"></div>
+  <div class="hero__circle"></div>
+  <div class="hero__beams" id="heroBeams"></div>
+  <div class="hero__frame-top"></div>
+  <div class="hero__frame-bottom"></div>
+</div>
+<div class="hero__canvas-wrap">
+  <canvas id="matrixCanvas"></canvas>
+</div>
+<div class="container hero__content">
+  <div class="hero__badge animate-up">
+    <span class="hero__badge-inner">
+      <span class="hero__badge-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></span>
+      Decentralized Venture Funding
+    </span>
+  </div>
+  <h1 class="hero__title animate-up delay-1">Your Gateway to<br>Decentralized Venture</h1>
+  <p class="hero__sub animate-up delay-2">Fund thematic pools, vote on startups, and release capital through verified milestones — with full transparency and on-chain protection.</p>
+  <div class="hero__actions animate-up delay-3">
+    <a href="#" class="pill-btn pill-btn--outline">Explore Pools</a>
+    <a href="#" class="pill-btn pill-btn--outline">View Startups <span class="arrow">↗</span></a>
+  </div>
+</div>
+<div class="hero__chat-bubble">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how-it-works" id="how">
+<div class="container">
+  <div class="how-it-works__header reveal">
+    <span class="badge badge--dark">○ Platform Lifecycle</span>
+    <h2 class="how-it-works__title">Three Phases. Full Transparency.</h2>
+  </div>
+  <div class="phases">
+    <div class="phase reveal">
+      <span class="phase__number">01</span>
+      <div class="phase__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
+      </div>
+      <h3 class="phase__name">Fund & Submit</h3>
+      <p class="phase__desc">Invest in thematic pools like "DeFi Protocol Q3" or "AI Startups". Startups submit pitches during the open window. Your tokens become voting power — 1 USDC = 1 vote.</p>
+      <span class="phase__tag">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Concurrent phase
+      </span>
+    </div>
+    <div class="phase reveal delay-1">
+      <span class="phase__number">02</span>
+      <div class="phase__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h3 class="phase__name">Vote</h3>
+      <p class="phase__desc">Review approved pitches and allocate your votes across up to 3 startups. Continue funding to boost your voting power. No withdrawals — ensuring integrity.</p>
+      <span class="phase__tag">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Sybil-resistant
+      </span>
+    </div>
+    <div class="phase reveal delay-2">
+      <span class="phase__number">03</span>
+      <div class="phase__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <h3 class="phase__name">Distribute</h3>
+      <p class="phase__desc">Top-voted startups win. Funds are allocated by vote share and locked in milestone-based escrow — released only when backers approve proof of delivery.</p>
+      <span class="phase__tag">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Escrow-protected
+      </span>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ BENEFITS GRID ============ -->
+<section class="benefits" id="benefits">
+<div class="container">
+  <div class="benefits__header reveal">
+    <div class="benefits__header-left">
+      <span class="badge badge--dark">◈ Why CrowdVC</span>
+      <h2 class="benefits__title">Built for Collective<br>Intelligence.</h2>
+    </div>
+    <a href="#" class="pill-btn pill-btn--primary">Start Investing <span class="arrow">→</span></a>
+  </div>
+  <div class="benefits__grid reveal delay-1">
+    <!-- Column 1: Mountain Viz -->
+    <div class="benefits__col">
+      <h3 class="benefits__col-title">Thematic Pools</h3>
+      <p class="benefits__col-desc">Invest in industries you believe in — AI, DeFi, Green Energy — without picking individual winners.</p>
+      <div class="mountain-viz" id="mountainViz">
+        <span class="mountain-label mountain-label--a">AI Startups</span>
+        <span class="mountain-label mountain-label--b">DeFi Q3</span>
+        <div class="mountain-bars" id="mountainBars"></div>
+      </div>
+    </div>
+    <!-- Column 2: Identity/Verification -->
+    <div class="benefits__col">
+      <h3 class="benefits__col-title">On-Chain Identity</h3>
+      <p class="benefits__col-desc">Verified investors, transparent voting, and immutable records. Trust the process, not intermediaries.</p>
+      <div class="identity-viz">
+        <div class="identity-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M12 14c-4 0-6 2-6 4v1h12v-1c0-2-2-4-6-4z"/><path d="M2 12a10 10 0 1 0 20 0"/>
+            <path d="M7 3.5A10 10 0 0 1 22 12"/><path d="M17 3.5A10 10 0 0 0 2 12"/>
+          </svg>
+        </div>
+        <div class="progress-bar"><div class="progress-bar__fill"></div></div>
+        <span class="progress-label">Verification Active — 68% synced</span>
+      </div>
+    </div>
+    <!-- Column 3: Dot Chart -->
+    <div class="benefits__col">
+      <h3 class="benefits__col-title">Transparent Metrics</h3>
+      <p class="benefits__col-desc">Real-time pool performance, vote distributions, and milestone tracking — all publicly verifiable.</p>
+      <div class="dot-chart" id="dotChart">
+        <div class="dot-chart__axis">
+          <span class="dot-chart__axis-val">100</span>
+          <span class="dot-chart__axis-val">80</span>
+          <span class="dot-chart__axis-val">60</span>
+          <span class="dot-chart__axis-val">40</span>
+          <span class="dot-chart__axis-val">20</span>
+          <span class="dot-chart__axis-val">0</span>
+        </div>
+        <div class="dot-chart__bars" id="dotChartBars"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ MILESTONE SECTION ============ -->
+<section class="milestone" id="safety">
+<div class="container">
+  <div class="milestone__inner">
+    <div class="milestone__content reveal">
+      <span class="badge badge--accent"><span class="badge__dot"></span> Safety Mechanism</span>
+      <h2 class="milestone__title">Milestone-Locked<br>Escrow Protection.</h2>
+      <p class="milestone__desc">Funds are never sent all at once. Winners define milestones, submit proof of completion, and backers vote to release. 51% capital approval required. If delivery fails, funds stay locked.</p>
+      <div class="milestone__features">
+        <div class="milestone__feature">
+          <div class="milestone__feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <p class="milestone__feature-text"><strong>Escrow-Locked:</strong> Pool contract holds all funds until milestones are verified.</p>
+        </div>
+        <div class="milestone__feature">
+          <div class="milestone__feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <p class="milestone__feature-text"><strong>Backer-Approved:</strong> Only investors who voted for a startup can approve its milestones.</p>
+        </div>
+        <div class="milestone__feature">
+          <div class="milestone__feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <p class="milestone__feature-text"><strong>Rug-Pull Resistant:</strong> Failed deliveries keep funds stuck or returned via governance.</p>
+        </div>
+      </div>
+      <a href="#" class="pill-btn pill-btn--primary">Learn More <span class="arrow">→</span></a>
+    </div>
+    <div class="milestone__visual reveal delay-2">
+      <div class="milestone-card">
+        <div class="milestone-card__header">
+          <span class="milestone-card__title">NovaPay — FinTech Pool</span>
+          <span class="milestone-card__badge">2 of 4 Released</span>
+        </div>
+        <div class="milestone-steps">
+          <div class="milestone-step">
+            <div class="milestone-step__check done">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="milestone-step__info">
+              <div class="milestone-step__name">Alpha Release</div>
+              <div class="milestone-step__meta">Approved Jan 15 · 94% votes</div>
+            </div>
+            <span class="milestone-step__amount">$120K</span>
+          </div>
+          <div class="milestone-step">
+            <div class="milestone-step__check done">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="milestone-step__info">
+              <div class="milestone-step__name">Security Audit Complete</div>
+              <div class="milestone-step__meta">Approved Feb 28 · 87% votes</div>
+            </div>
+            <span class="milestone-step__amount">$80K</span>
+          </div>
+          <div class="milestone-step">
+            <div class="milestone-step__check pending"></div>
+            <div class="milestone-step__info">
+              <div class="milestone-step__name">Beta Launch</div>
+              <div class="milestone-step__meta">Pending · Proof submitted</div>
+            </div>
+            <span class="milestone-step__amount" style="color:var(--grey-500)">$150K</span>
+          </div>
+          <div class="milestone-step">
+            <div class="milestone-step__check pending"></div>
+            <div class="milestone-step__info">
+              <div class="milestone-step__name">Mainnet Deployment</div>
+              <div class="milestone-step__meta">Locked</div>
+            </div>
+            <span class="milestone-step__amount" style="color:var(--grey-500)">$150K</span>
+          </div>
+        </div>
+        <div class="milestone-card__footer">
+          <div>
+            <div class="milestone-card__total-label">Total Escrowed</div>
+            <div class="milestone-card__total-val">$500,000</div>
+          </div>
+          <div style="text-align:right">
+            <div class="milestone-card__total-label">Released</div>
+            <div class="milestone-card__total-val" style="color:var(--accent)">$200,000</div>
+          </div>
+        </div>
+        <div class="milestone-card__progress"><div class="milestone-card__progress-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="faq" id="faq">
+<div class="container">
+  <div class="faq__inner">
+    <div class="faq__left reveal">
+      <div class="faq__contact-card">
+        <div class="faq__contact-badge">
+          <span class="badge badge--white">✦ Contact</span>
+        </div>
+        <h3 class="faq__contact-title">Need help getting started?</h3>
+        <p class="faq__contact-desc">Our team is available to walk you through pools, voting mechanics, and milestone tracking.</p>
+        <button class="faq__contact-btn">
+          Get in Touch
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="faq__right reveal delay-1">
+      <h2 class="faq__title">Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <div class="faq-item__header" onclick="toggleFaq(this)">
+          <span class="faq-item__question">What is a thematic investment pool?</span>
+          <span class="faq-item__toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </div>
+        <div class="faq-item__answer"><div class="faq-item__answer-inner">A thematic pool groups capital around an industry thesis — like "AI Startups" or "Green Energy Q4." You invest in the theme, not a specific company. After the funding window, startups pitch and investors vote to allocate pool funds to the most promising teams.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-item__header" onclick="toggleFaq(this)">
+          <span class="faq-item__question">How does voting power work?</span>
+          <span class="faq-item__toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </div>
+        <div class="faq-item__answer"><div class="faq-item__answer-inner">1 token contributed = 1 vote unit. You can allocate votes across up to 3 startups per pool. You can also increase your voting power by contributing additional funds during the voting phase.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-item__header" onclick="toggleFaq(this)">
+          <span class="faq-item__question">What happens if a startup doesn't deliver?</span>
+          <span class="faq-item__toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </div>
+        <div class="faq-item__answer"><div class="faq-item__answer-inner">Funds are locked in a milestone-based escrow. If a startup fails to deliver proof for a milestone, the remaining funds stay in escrow and can be returned to investors through admin governance. This prevents rug pulls and protects investor capital.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-item__header" onclick="toggleFaq(this)">
+          <span class="faq-item__question">Can I withdraw my investment during voting?</span>
+          <span class="faq-item__toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </div>
+        <div class="faq-item__answer"><div class="faq-item__answer-inner">To maintain voting integrity, withdrawals during the voting phase incur a penalty. This prevents vote manipulation where investors could vote and then remove their backing. You can freely withdraw before voting begins or after distribution.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-item__header" onclick="toggleFaq(this)">
+          <span class="faq-item__question">Which tokens are accepted?</span>
+          <span class="faq-item__toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </div>
+        <div class="faq-item__answer"><div class="faq-item__answer-inner">Currently, pools accept USDC as the primary funding token. This ensures stable-value contributions and straightforward allocation math. Additional stablecoin support may be added through governance proposals.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ CTA BANNER ============ -->
+<section class="cta-banner">
+<div class="cta-banner__bg-texture">
+  <canvas id="ctaTexture" style="position:absolute;inset:0;width:100%;height:100%;opacity:.3"></canvas>
+</div>
+<div class="container">
+  <div class="cta-banner__inner">
+    <div class="cta-banner__content reveal">
+      <span class="badge badge--accent"><span class="badge__dot"></span> Open for Funding</span>
+      <h2 class="cta-banner__title">Join the Next Wave of Decentralized Venture.</h2>
+      <p class="cta-banner__desc">Pool your capital with a community of aligned investors. Back breakthrough startups through transparent, milestone-protected pools.</p>
+      <div class="cta-banner__actions">
+        <a href="#" class="pill-btn pill-btn--white">Launch App <span class="arrow">→</span></a>
+        <a href="#" class="pill-btn pill-btn--glass">View Active Pools <span class="arrow">↗</span></a>
+      </div>
+    </div>
+    <div class="cta-banner__visual reveal delay-2">
+      <div class="glass-chart">
+        <div class="glass-glow"></div>
+        <div class="glass-candle glass-candle--green" style="animation-delay:0s">
+          <div class="glass-candle__wick" style="height:20px"></div>
+          <div class="glass-candle__body" style="height:100px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--red" style="animation-delay:.1s">
+          <div class="glass-candle__wick" style="height:30px"></div>
+          <div class="glass-candle__body" style="height:70px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--green" style="animation-delay:.2s">
+          <div class="glass-candle__wick" style="height:16px"></div>
+          <div class="glass-candle__body" style="height:140px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--neutral" style="animation-delay:.3s">
+          <div class="glass-candle__wick" style="height:24px"></div>
+          <div class="glass-candle__body" style="height:90px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--green" style="animation-delay:.4s">
+          <div class="glass-candle__wick" style="height:12px"></div>
+          <div class="glass-candle__body" style="height:180px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--red" style="animation-delay:.5s">
+          <div class="glass-candle__wick" style="height:28px"></div>
+          <div class="glass-candle__body" style="height:60px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+        <div class="glass-candle glass-candle--green" style="animation-delay:.6s">
+          <div class="glass-candle__wick" style="height:18px"></div>
+          <div class="glass-candle__body" style="height:200px"></div>
+          <div class="glass-candle__shadow"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+<div class="container footer__inner">
+  <span class="footer__copy">© 2026 CrowdVC. Decentralized venture funding protocol.</span>
+  <div class="footer__links">
+    <a href="#">Documentation</a>
+    <a href="#">GitHub</a>
+    <a href="#">Discord</a>
+    <a href="#">Terms</a>
+  </div>
+</div>
+</footer>
+
+<script>
+// ==================== NAVBAR SCROLL ====================
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// ==================== SCROLL REVEAL ====================
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.15 });
+reveals.forEach(r => observer.observe(r));
+
+// ==================== GENERATE BEAMS ====================
+(function() {
+  const container = document.getElementById('heroBeams');
+  if (!container) return;
+  const beamCount = 24;
+  for (let i = 0; i < beamCount; i++) {
+    const beam = document.createElement('div');
+    beam.className = 'hero__beam';
+    const angle = (i / beamCount) * 360;
+    beam.style.transform = `rotate(${angle}deg)`;
+    beam.style.animationDelay = `${(i / beamCount) * 4}s`;
+    beam.style.animationDuration = `${3.5 + Math.random() * 2}s`;
+    container.appendChild(beam);
+  }
+})();
+
+// ==================== MATRIX CANVAS (Hero Background) ====================
+(function() {
+  const c = document.getElementById('matrixCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  let W, H;
+  function resize() {
+    const rect = c.parentElement.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    c.width = W * dpr;
+    c.height = H * dpr;
+    c.style.width = W + 'px';
+    c.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+
+  // Precompute a static field of dashes
+  let dashes = [];
+  function generateDashes() {
+    dashes = [];
+    const gapX = 11;
+    const gapY = 14;
+    const cols = Math.ceil(W / gapX);
+    const rows = Math.ceil(H / gapY);
+    const cx = W / 2;
+    const cy = -H * 0.15; // Circle center is above the canvas area
+
+    for (let col = 0; col < cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        const x = col * gapX + (Math.random() - 0.5) * 2;
+        const y = row * gapY + (Math.random() - 0.5) * 2;
+
+        // Distance from circle center for radial fade
+        const dx = x - cx;
+        const dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Create a landscape/mountain silhouette shape
+        const t = col / cols;
+        const mountainLine =
+          Math.sin(t * Math.PI * 2.8 + 0.3) * 0.25 +
+          Math.sin(t * Math.PI * 5.1 + 1.2) * 0.12 +
+          Math.sin(t * Math.PI * 1.1 + 0.7) * 0.18 +
+          0.45;
+        const mountainY = H * mountainLine;
+
+        // Dashes appear below the mountain line
+        if (y < mountainY * 0.65) continue;
+
+        // Density: denser near mountain peaks, sparser at edges
+        const verticalFade = Math.min(1, (y - mountainY * 0.5) / (H * 0.4));
+        const edgeFade = 1 - Math.pow(Math.abs(t - 0.5) * 2, 1.5) * 0.3;
+        const circleFade = Math.min(1, dist / (W * 0.5));
+
+        let probability = verticalFade * edgeFade * 0.75;
+        if (Math.random() > probability) continue;
+
+        // Opacity: brighter near top of mountain, fades downward
+        const brightness = (1 - (y / H) * 0.6) * edgeFade * (0.5 + Math.random() * 0.5);
+        const opacity = Math.max(0.04, Math.min(brightness * 0.55, 0.5));
+
+        const dashH = 4 + Math.random() * 7;
+
+        dashes.push({ x, y, w: 2, h: dashH, opacity });
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const d of dashes) {
+      ctx.fillStyle = `rgba(255,255,255,${d.opacity})`;
+      ctx.fillRect(d.x, d.y, d.w, d.h);
+    }
+  }
+
+  generateDashes();
+  draw();
+
+  window.addEventListener('resize', () => {
+    resize();
+    generateDashes();
+    draw();
+  });
+})();
+
+// ==================== MOUNTAIN BARS (Benefits Col 1) ====================
+(function() {
+  const container = document.getElementById('mountainBars');
+  if (!container) return;
+  const barCount = 50;
+  for (let i = 0; i < barCount; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'mountain-bar';
+    const t = i / barCount;
+    const h = Math.sin(t * Math.PI) * 120 + Math.sin(t * Math.PI * 3) * 40 + Math.random() * 20 + 10;
+    bar.style.height = h + 'px';
+    bar.style.opacity = 0.3 + Math.sin(t * Math.PI) * 0.5;
+    bar.style.animationDelay = (i * 30) + 'ms';
+    container.appendChild(bar);
+  }
+})();
+
+// ==================== DOT CHART (Benefits Col 3) ====================
+(function() {
+  const container = document.getElementById('dotChartBars');
+  if (!container) return;
+  const heights = [6, 8, 5, 10, 7, 12, 9, 14, 8, 11, 6, 13];
+  const maxCells = 15;
+  heights.forEach((h, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'dot-bar';
+    for (let j = 0; j < maxCells; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'dot-bar__cell';
+      if (j < h) {
+        cell.classList.add('filled');
+        if (i === 7 || i === 11) cell.classList.add('accent');
+      }
+      bar.appendChild(cell);
+    }
+    container.appendChild(bar);
+  });
+})();
+
+// ==================== CTA TEXTURE CANVAS ====================
+(function() {
+  const c = document.getElementById('ctaTexture');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  function resize() {
+    c.width = c.parentElement.offsetWidth;
+    c.height = c.parentElement.offsetHeight;
+  }
+  function draw() {
+    resize();
+    const W = c.width, H = c.height;
+    ctx.clearRect(0, 0, W, H);
+    const cols = Math.floor(W / 12);
+    const rows = Math.floor(H / 16);
+    for (let col = 0; col < cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        if (Math.random() > 0.25) continue;
+        const x = col * 12;
+        const y = row * 16;
+        const distFromBottom = 1 - (y / H);
+        const o = distFromBottom * 0.35 * Math.random();
+        ctx.fillStyle = `rgba(255,255,255,${o})`;
+        ctx.fillRect(x, y, 2, 8);
+      }
+    }
+  }
+  draw();
+  window.addEventListener('resize', draw);
+})();
+
+// ==================== FAQ TOGGLE ====================
+function toggleFaq(header) {
+  const item = header.parentElement;
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+// ==================== SMOOTH SCROLL ====================
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+</script>
+
+</body>
+</html
